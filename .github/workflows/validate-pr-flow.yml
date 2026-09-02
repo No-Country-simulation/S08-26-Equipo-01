@@ -1,0 +1,42 @@
+name: Validate PR flow
+
+on:
+  pull_request:
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+      - ready_for_review
+
+permissions:
+  contents: read
+
+jobs:
+  validate-pr-flow:
+    name: Validate PR flow
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Validate base and source branches
+        shell: bash
+        run: |
+          base="${{ github.base_ref }}"
+          head="${{ github.head_ref }}"
+
+          valid_work_branch='^(feature|fix)/(frontend|backend)-[a-z0-9]+([-.][a-z0-9]+)*$|^(docs|qa|chore)/[a-z0-9]+([-.][a-z0-9]+)*$'
+
+          if [[ "$base" == "main" ]]; then
+            if [[ "$head" != "develop" ]]; then
+              echo "Pull Requests hacia main solo pueden venir desde develop."
+              echo "Rama actual: $head"
+              exit 1
+            fi
+          elif [[ "$base" == "develop" ]]; then
+            if [[ ! "$head" =~ $valid_work_branch ]]; then
+              echo "Pull Requests hacia develop deben venir desde ramas feature/*, fix/*, docs/*, qa/* o chore/*."
+              echo "Rama actual: $head"
+              exit 1
+            fi
+          fi
+
