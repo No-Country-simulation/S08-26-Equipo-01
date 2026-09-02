@@ -44,3 +44,24 @@ qa/nombre-corto
 chore/nombre-corto
 ```
 
+## Configuracion sugerida del repositorio
+
+1. Subir las ramas `main` y `develop` al repositorio remoto.
+2. Definir `main` como rama principal en GitHub.
+3. Proteger `main` para que reciba cambios mediante Pull Request desde `develop`.
+4. Proteger `develop` de forma ligera para recibir cambios mediante Pull Request desde ramas de trabajo.
+5. Usar una plantilla simple de Pull Request cuando el equipo lo considere necesario.
+6. Usar una convencion de commits con el formato `tipo(scope): descripcion`.
+
+Tipos de commit sugeridos:
+
+```text
+feat(frontend): agregar vista de ordenes de trabajo
+feat(backend): crear endpoint de ordenes
+fix(frontend): corregir validacion del formulario
+fix(backend): ajustar respuesta de clientes
+docs(readme): actualizar descripcion del proyecto
+chore(repo): configurar estructura inicial
+qa(test): agregar casos para flujo de orden de trabajo
+refactor(backend): simplificar servicio de cotizaciones
+```
