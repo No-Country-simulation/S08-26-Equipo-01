@@ -6,12 +6,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ProblemDetail;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
@@ -115,6 +115,7 @@ public class GlobalExceptionHandler {
             case "NotBlank", "NotNull" -> "REQUIRED";
             case "Email" -> "INVALID_EMAIL";
             case "Size" -> "INVALID_SIZE";
+            case "Utf8ByteLength" -> "INVALID_BYTE_LENGTH";
             default -> "INVALID_VALUE";
         };
     }

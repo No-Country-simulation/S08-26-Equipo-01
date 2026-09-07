@@ -75,9 +75,16 @@ class JwtServiceTest {
                 List.of()
         );
         String token = jwtService.generate(user).value();
-        char replacement = token.charAt(token.length() - 1) == 'A' ? 'B' : 'A';
-        String tampered = token.substring(0, token.length() - 1) + replacement;
+        String tampered = tamperSignature(token);
 
         assertThrows(JwtException.class, () -> jwtDecoder.decode(tampered));
+    }
+
+    private String tamperSignature(String token) {
+        String[] parts = token.split("\\.", -1);
+        String signature = parts[2];
+        char replacement = signature.charAt(0) == 'A' ? 'B' : 'A';
+        parts[2] = replacement + signature.substring(1);
+        return String.join(".", parts);
     }
 }

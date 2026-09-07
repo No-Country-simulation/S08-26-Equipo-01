@@ -4,6 +4,8 @@ import com.nocountry.qualitytrack.auth.entity.PasswordResetToken;
 import com.nocountry.qualitytrack.auth.repository.PasswordResetTokenRepository;
 import com.nocountry.qualitytrack.auth.token.OpaqueTokenService;
 import com.nocountry.qualitytrack.notification.email.EmailService;
+import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
+import com.nocountry.qualitytrack.shared.exception.BusinessException;
 import com.nocountry.qualitytrack.users.entity.User;
 import com.nocountry.qualitytrack.users.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +20,7 @@ import java.time.Instant;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.verify;
@@ -26,17 +29,11 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class PasswordRecoveryServiceTest {
 
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private PasswordResetTokenRepository tokenRepository;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
-
-    @Mock
-    private EmailService emailService;
+    @Mock private UserRepository userRepository;
+    @Mock private PasswordResetTokenRepository tokenRepository;
+    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private EmailService emailService;
+    @Mock private TokenCleanupService tokenCleanupService;
 
     private OpaqueTokenService opaqueTokenService;
     private PasswordRecoveryService service;
@@ -50,6 +47,7 @@ class PasswordRecoveryServiceTest {
                 opaqueTokenService,
                 passwordEncoder,
                 emailService,
+                tokenCleanupService,
                 Duration.ofMinutes(30)
         );
     }
@@ -77,14 +75,36 @@ class PasswordRecoveryServiceTest {
                 now.minusSeconds(60)
         );
 
-        when(tokenRepository.findByTokenHash(opaqueTokenService.hash(rawToken)))
-                .thenReturn(Optional.of(token));
-        when(passwordEncoder.encode("newSecurePass123")).thenReturn("new-bcrypt-hash");
+        when(tokenRepository.findByTokenHash(opaqueTokenService.hash(rawToken))).thenReturn(Optional.of(token));
+        when(passwordEncoder.encode("updated-password")).thenReturn("new-hash");
 
-        service.resetPassword(rawToken, "newSecurePass123");
+        service.resetPassword(rawToken, "updated-password");
 
-        assertEquals("new-bcrypt-hash", user.getPasswordHash());
+        assertEquals("new-hash", user.getPasswordHash());
         verify(tokenRepository).delete(token);
+    }
+
+    @Test
+    void rejectsExpiredTokenAndCleansItInIndependentTransaction() {
+        String rawToken = "expired-reset-token";
+        User user = activeUser();
+        Instant now = Instant.now();
+        PasswordResetToken token = new PasswordResetToken(
+                user,
+                opaqueTokenService.hash(rawToken),
+                now.minusSeconds(1),
+                now.minusSeconds(600)
+        );
+
+        when(tokenRepository.findByTokenHash(opaqueTokenService.hash(rawToken))).thenReturn(Optional.of(token));
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.resetPassword(rawToken, "updated-password")
+        );
+
+        assertEquals(ApiErrorCode.PASSWORD_RESET_TOKEN_EXPIRED, exception.getCode());
+        verify(tokenCleanupService).deletePasswordResetToken(token.getUserId());
     }
 
     private User activeUser() {

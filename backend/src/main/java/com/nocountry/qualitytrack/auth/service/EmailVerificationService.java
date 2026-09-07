@@ -25,6 +25,7 @@ public class EmailVerificationService {
     private final UserRepository userRepository;
     private final OpaqueTokenService opaqueTokenService;
     private final EmailService emailService;
+    private final TokenCleanupService tokenCleanupService;
     private final Duration expiration;
 
     public EmailVerificationService(
@@ -32,12 +33,14 @@ public class EmailVerificationService {
             UserRepository userRepository,
             OpaqueTokenService opaqueTokenService,
             EmailService emailService,
+            TokenCleanupService tokenCleanupService,
             @Value("${security.auth.email-verification-expiration:24h}") Duration expiration
     ) {
         this.tokenRepository = tokenRepository;
         this.userRepository = userRepository;
         this.opaqueTokenService = opaqueTokenService;
         this.emailService = emailService;
+        this.tokenCleanupService = tokenCleanupService;
         this.expiration = expiration;
     }
 
@@ -82,7 +85,7 @@ public class EmailVerificationService {
                 ));
 
         if (token.isExpired(now)) {
-            tokenRepository.delete(token);
+            tokenCleanupService.deleteEmailVerificationToken(token.getUserId());
             throw new BusinessException(
                     ApiErrorCode.VERIFICATION_TOKEN_EXPIRED,
                     "El token de verificación ha expirado."
@@ -92,7 +95,7 @@ public class EmailVerificationService {
         User user = token.getUser();
         if (user.getAccountType() != AccountType.CUSTOMER
                 || user.getStatus() != UserStatus.PENDING_VERIFICATION) {
-            tokenRepository.delete(token);
+            tokenCleanupService.deleteEmailVerificationToken(token.getUserId());
             throw new BusinessException(
                     ApiErrorCode.VERIFICATION_NOT_AVAILABLE,
                     "La verificación de correo no está disponible para esta cuenta."

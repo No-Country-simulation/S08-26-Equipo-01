@@ -1,5 +1,6 @@
 package com.nocountry.qualitytrack.auth.dto.request;
 
+import com.nocountry.qualitytrack.shared.validation.Utf8ByteLength;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
@@ -11,6 +12,7 @@ public record LoginRequest(
         String email,
 
         @NotBlank(message = "La contraseña es obligatoria.")
+        @Utf8ByteLength(max = 72, message = "La contraseña no puede superar los 72 bytes en UTF-8.")
         String password
 ) {
 }

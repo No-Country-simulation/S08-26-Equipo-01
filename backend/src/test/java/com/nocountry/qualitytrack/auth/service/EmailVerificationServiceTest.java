@@ -37,6 +37,9 @@ class EmailVerificationServiceTest {
     @Mock
     private EmailService emailService;
 
+    @Mock
+    private TokenCleanupService tokenCleanupService;
+
     private OpaqueTokenService opaqueTokenService;
     private EmailVerificationService service;
 
@@ -48,6 +51,7 @@ class EmailVerificationServiceTest {
                 userRepository,
                 opaqueTokenService,
                 emailService,
+                tokenCleanupService,
                 Duration.ofHours(24)
         );
     }
@@ -75,7 +79,7 @@ class EmailVerificationServiceTest {
     }
 
     @Test
-    void rejectsExpiredToken() {
+    void rejectsExpiredTokenAndCleansItInIndependentTransaction() {
         String rawToken = "expired-verification-token";
         User user = User.registerCustomer("Edgar", "Camberos", "edgar@example.com", "hash");
         Instant now = Instant.now();
@@ -95,6 +99,6 @@ class EmailVerificationServiceTest {
         );
 
         assertEquals(ApiErrorCode.VERIFICATION_TOKEN_EXPIRED, exception.getCode());
-        verify(tokenRepository).delete(token);
+        verify(tokenCleanupService).deleteEmailVerificationToken(token.getUserId());
     }
 }

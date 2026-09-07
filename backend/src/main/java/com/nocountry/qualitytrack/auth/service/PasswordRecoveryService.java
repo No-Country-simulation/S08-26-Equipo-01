@@ -26,6 +26,7 @@ public class PasswordRecoveryService {
     private final OpaqueTokenService opaqueTokenService;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
+    private final TokenCleanupService tokenCleanupService;
     private final Duration expiration;
 
     public PasswordRecoveryService(
@@ -34,6 +35,7 @@ public class PasswordRecoveryService {
             OpaqueTokenService opaqueTokenService,
             PasswordEncoder passwordEncoder,
             EmailService emailService,
+            TokenCleanupService tokenCleanupService,
             @Value("${security.auth.password-reset-expiration:30m}") Duration expiration
     ) {
         this.userRepository = userRepository;
@@ -41,6 +43,7 @@ public class PasswordRecoveryService {
         this.opaqueTokenService = opaqueTokenService;
         this.passwordEncoder = passwordEncoder;
         this.emailService = emailService;
+        this.tokenCleanupService = tokenCleanupService;
         this.expiration = expiration;
     }
 
@@ -65,7 +68,7 @@ public class PasswordRecoveryService {
                 ));
 
         if (token.isExpired(now)) {
-            tokenRepository.delete(token);
+            tokenCleanupService.deletePasswordResetToken(token.getUserId());
             throw new BusinessException(
                     ApiErrorCode.PASSWORD_RESET_TOKEN_EXPIRED,
                     "El token para restablecer la contraseña ha expirado."
@@ -74,7 +77,7 @@ public class PasswordRecoveryService {
 
         User user = token.getUser();
         if (user.getStatus() != UserStatus.ACTIVE) {
-            tokenRepository.delete(token);
+            tokenCleanupService.deletePasswordResetToken(token.getUserId());
             throw new BusinessException(
                     ApiErrorCode.INVALID_PASSWORD_RESET_TOKEN,
                     "El token para restablecer la contraseña no es válido."
