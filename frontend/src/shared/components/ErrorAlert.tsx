@@ -5,7 +5,7 @@ type ErrorAlertProps = {
   onRetry?: () => void
 }
 
-export default function ErrorAlert({ message, onRetry }: ErrorAlertProps) {
+export const ErrorAlert = ({ message, onRetry }: ErrorAlertProps) => {
   const id = useId()
   return (
     <div role="alert" aria-describedby={id} className="alert alert-error">

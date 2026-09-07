@@ -1,4 +1,4 @@
-export default function AuthPage() {
+export const AuthPage = () => {
   return (
     <div className="flex min-h-screen items-center justify-center">
       <p className="text-lg">--Pagina de autenticacion--</p>

@@ -10,7 +10,7 @@ interface UseSystemDesignResult {
   retry: () => void
 }
 
-export function useSystemDesign(): UseSystemDesignResult {
+export const useSystemDesign = (): UseSystemDesignResult => {
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ['users'],
     queryFn: getUsers,
