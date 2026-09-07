@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${DB_NAME:-qualitytrack}
+      POSTGRES_USER: ${DB_USER:-qualitytrack}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-qualitytrack}
+    ports:
+      - "${DB_HOST_PORT:-5435}:5432"
+    volumes:
+      - qualitytrack-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-qualitytrack}
+      DB_USER: ${DB_USER:-qualitytrack}
+      DB_PASSWORD: ${DB_PASSWORD:-qualitytrack}
+    ports:
+      - "${BACKEND_PORT:-8085}:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+
+volumes:
+  qualitytrack-postgres-data:
