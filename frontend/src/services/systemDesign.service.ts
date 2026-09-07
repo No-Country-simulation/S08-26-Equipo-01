@@ -1,5 +1,5 @@
 import type { User } from '@/features/SystemDesign/types'
-import apiClient from './apiClient'
+import { apiClient } from './apiClient'
 
 const EXAMPLE_API_BASE_URL = 'https://jsonplaceholder.typicode.com'
 

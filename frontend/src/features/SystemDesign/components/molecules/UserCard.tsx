@@ -1,11 +1,11 @@
 import type { User } from '@/features/SystemDesign/types'
-import UserStatusBadge from '../atoms/UserStatusBadge'
+import { UserStatusBadge } from '../atoms/UserStatusBadge'
 
 type UserCardProps = {
   user: User
 }
 
-export default function UserCard({ user }: UserCardProps) {
+export const UserCard = ({ user }: UserCardProps) => {
   return (
     <article className="card bg-base-100 shadow-xl">
       <div className="card-body">
