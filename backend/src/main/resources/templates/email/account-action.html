@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="light">
+    <meta name="supported-color-schemes" content="light">
+    <title th:text="${title}">QualityTrack</title>
+    <style>
+        body, table, td, p, a {
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
+        }
+
+        table, td {
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
+        }
+
+        table {
+            border-collapse: collapse !important;
+        }
+
+        body {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            background: #eef2f7;
+        }
+
+        @media only screen and (max-width: 640px) {
+            .shell {
+                width: 100% !important;
+            }
+
+            .content-cell {
+                padding-left: 24px !important;
+                padding-right: 24px !important;
+            }
+
+            .hero-title {
+                font-size: 28px !important;
+                line-height: 34px !important;
+            }
+
+            .action-link {
+                display: block !important;
+                padding-left: 20px !important;
+                padding-right: 20px !important;
+            }
+        }
+    </style>
+</head>
+<body style="margin:0;padding:0;background:#eef2f7;font-family:Arial,Helvetica,sans-serif;color:#0f172a;">
+
+<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;" th:text="${preheader}">
+    Acción de seguridad en QualityTrack.
+</div>
+
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="width:100%;background:#eef2f7;">
+    <tr>
+        <td align="center" style="padding:42px 16px;">
+            <table class="shell" role="presentation" width="620" cellpadding="0" cellspacing="0" border="0"
+                   style="width:620px;max-width:620px;background:#ffffff;border-radius:22px;overflow:hidden;box-shadow:0 18px 50px rgba(15,23,42,.10);">
+
+                <tr>
+                    <td style="background:#0f172a;padding:28px 34px 30px 34px;border-bottom:4px solid #2563eb;">
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                            <tr>
+                                <td valign="middle" width="52">
+                                    <table role="presentation" width="46" height="46" cellpadding="0" cellspacing="0" border="0"
+                                           style="width:46px;height:46px;background:#2563eb;border-radius:13px;">
+                                        <tr>
+                                            <td align="center" valign="middle"
+                                                style="font-size:17px;font-weight:800;letter-spacing:-.5px;color:#ffffff;">
+                                                QT
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                                <td valign="middle" style="padding-left:12px;">
+                                    <div style="font-size:19px;line-height:24px;font-weight:800;color:#ffffff;letter-spacing:-.3px;">
+                                        QualityTrack
+                                    </div>
+                                    <div style="font-size:12px;line-height:18px;color:#94a3b8;margin-top:2px;letter-spacing:.4px;">
+                                        Trazabilidad · Calidad · Control
+                                    </div>
+                                </td>
+                                <td align="right" valign="middle">
+                                    <span style="display:inline-block;padding:7px 10px;border:1px solid #334155;border-radius:999px;font-size:10px;line-height:12px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#cbd5e1;"
+                                          th:text="${category}">Seguridad</span>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="content-cell" style="padding:44px 46px 18px 46px;">
+                        <div style="font-size:12px;line-height:16px;font-weight:800;letter-spacing:1.4px;text-transform:uppercase;color:#2563eb;margin-bottom:14px;"
+                             th:text="${eyebrow}">Cuenta y seguridad</div>
+
+                        <h1 class="hero-title"
+                            style="margin:0;font-size:34px;line-height:41px;letter-spacing:-1px;font-weight:800;color:#0f172a;"
+                            th:text="${title}">Confirma tu correo</h1>
+
+                        <p style="margin:18px 0 0 0;font-size:16px;line-height:26px;color:#475569;"
+                           th:text="${description}">
+                            Usa el siguiente enlace para continuar.
+                        </p>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="content-cell" style="padding:24px 46px 4px 46px;">
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                               style="width:100%;background:#f8fafc;border:1px solid #dbe3ee;border-radius:16px;">
+                            <tr>
+                                <td align="center" style="padding:28px 24px 26px 24px;">
+                                    <div style="font-size:13px;line-height:20px;color:#64748b;margin-bottom:18px;"
+                                         th:text="${actionHint}">
+                                        Abre el enlace seguro para continuar.
+                                    </div>
+
+                                    <table role="presentation" cellpadding="0" cellspacing="0" border="0" align="center">
+                                        <tr>
+                                            <td align="center" bgcolor="#2563eb"
+                                                style="background:#2563eb;border-radius:12px;box-shadow:0 8px 20px rgba(37,99,235,.20);">
+                                                <a class="action-link"
+                                                   th:href="${actionUrl}"
+                                                   th:text="${actionLabel}"
+                                                   style="display:inline-block;padding:15px 30px;font-size:15px;line-height:20px;font-weight:800;color:#ffffff;text-decoration:none;border-radius:12px;">
+                                                    Continuar
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    </table>
+
+                                    <div style="margin-top:16px;font-size:12px;line-height:18px;color:#94a3b8;">
+                                        Este enlace es de un solo uso y caduca automáticamente.
+                                    </div>
+
+                                    <div style="margin-top:8px;font-size:12px;line-height:18px;color:#94a3b8;">
+                                        Si el botón no abre correctamente,
+                                        <a th:href="${actionUrl}"
+                                           style="color:#2563eb;text-decoration:underline;font-weight:700;">
+                                            abre el enlace en tu navegador
+                                        </a>.
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="content-cell" style="padding:24px 46px 6px 46px;">
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                               style="width:100%;background:#fff7ed;border:1px solid #fed7aa;border-radius:14px;">
+                            <tr>
+                                <td width="42" valign="top" style="padding:18px 0 18px 18px;">
+                                    <table role="presentation" width="28" height="28" cellpadding="0" cellspacing="0" border="0"
+                                           style="width:28px;height:28px;background:#ffedd5;border-radius:999px;">
+                                        <tr>
+                                            <td align="center" valign="middle" style="font-size:15px;font-weight:800;color:#c2410c;">!</td>
+                                        </tr>
+                                    </table>
+                                </td>
+                                <td valign="top" style="padding:18px 18px 18px 12px;">
+                                    <div style="font-size:13px;line-height:18px;font-weight:800;color:#9a3412;margin-bottom:4px;">
+                                        Aviso de seguridad
+                                    </div>
+                                    <div style="font-size:13px;line-height:20px;color:#9a3412;" th:text="${securityMessage}">
+                                        Si no solicitaste esta acción, ignora el correo.
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="content-cell" style="padding:30px 46px 42px 46px;">
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+                               style="width:100%;border-top:1px solid #e2e8f0;">
+                            <tr>
+                                <td style="padding-top:22px;font-size:12px;line-height:19px;color:#94a3b8;">
+                                    Este correo fue generado automáticamente por QualityTrack. No reenvíes este mensaje ni compartas su enlace de acceso con otras personas.
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+
+            <table role="presentation" width="620" cellpadding="0" cellspacing="0" border="0"
+                   style="width:620px;max-width:620px;">
+                <tr>
+                    <td align="center" style="padding:18px 20px 0 20px;font-size:11px;line-height:17px;color:#94a3b8;">
+                        © QualityTrack · Sistema de gestión y trazabilidad de calidad
+                    </td>
+                </tr>
+            </table>
+        </td>
+    </tr>
+</table>
+
+</body>
+</html>
