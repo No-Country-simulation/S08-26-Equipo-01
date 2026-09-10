@@ -106,6 +106,26 @@ public class EmailVerificationService {
         tokenRepository.delete(token);
     }
 
+    /**
+     * Marks a pending customer account as verified when another trusted proof already demonstrated
+     * control of the destination email, such as a valid one-time customer invitation token.
+     * Any ordinary email-verification token is consumed in the same transaction so no stale
+     * verification credential remains after activation.
+     */
+    @Transactional
+    public void verifyWithTrustedEmailProof(User user, Instant verifiedAt) {
+        if (user.getAccountType() != AccountType.CUSTOMER
+                || user.getStatus() != UserStatus.PENDING_VERIFICATION) {
+            throw new BusinessException(
+                    ApiErrorCode.VERIFICATION_NOT_AVAILABLE,
+                    "La verificación de correo no está disponible para esta cuenta."
+            );
+        }
+
+        user.verifyEmail(verifiedAt);
+        tokenRepository.findById(user.getId()).ifPresent(tokenRepository::delete);
+    }
+
     @Transactional
     public void resend(String email) {
         String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);

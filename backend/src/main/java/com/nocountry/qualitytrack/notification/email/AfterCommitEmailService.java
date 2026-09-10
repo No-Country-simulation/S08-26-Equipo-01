@@ -19,6 +19,16 @@ public class AfterCommitEmailService implements EmailService {
         executeAfterCommit(() -> delegate.sendPasswordResetEmail(recipient, token));
     }
 
+    @Override
+    public void sendCustomerInvitationEmail(
+            String recipient,
+            String token,
+            String customerName,
+            String role
+    ) {
+        executeAfterCommit(() -> delegate.sendCustomerInvitationEmail(recipient, token, customerName, role));
+    }
+
     private void executeAfterCommit(Runnable action) {
         if (TransactionSynchronizationManager.isSynchronizationActive()
                 && TransactionSynchronizationManager.isActualTransactionActive()) {

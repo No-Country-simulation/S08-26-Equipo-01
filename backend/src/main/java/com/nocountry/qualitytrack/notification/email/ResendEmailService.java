@@ -32,6 +32,16 @@ public class ResendEmailService implements EmailService {
         send(recipient, emailFactory.passwordReset(token), "password reset");
     }
 
+    @Override
+    public void sendCustomerInvitationEmail(
+            String recipient,
+            String token,
+            String customerName,
+            String role
+    ) {
+        send(recipient, emailFactory.customerInvitation(token, customerName, role), "customer invitation");
+    }
+
     private void send(String recipient, EmailContent content, String purpose) {
         try {
             ResendEmailResponse response = restClient.post()

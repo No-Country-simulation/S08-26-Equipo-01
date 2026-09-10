@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import org.springframework.http.ProblemDetail;
 
 import java.lang.annotation.Documented;
@@ -17,9 +18,10 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
+@SecurityRequirements
 @Operation(
         summary = "Registrar cuenta de cliente",
-        description = "Crea una cuenta CUSTOMER en estado PENDING_VERIFICATION y envía un enlace de verificación por correo electrónico."
+        description = "Crea una cuenta de tipo CUSTOMER con los datos proporcionados. El correo se normaliza y debe ser único; si el registro es válido, la cuenta queda en estado PENDING_VERIFICATION y se envía un enlace de verificación al correo indicado. Mientras no se complete esa verificación, el usuario todavía no puede iniciar sesión. Este endpoint crea únicamente la cuenta de usuario: no crea una empresa ni una membresía."
 )
 @ApiResponses({
         @ApiResponse(

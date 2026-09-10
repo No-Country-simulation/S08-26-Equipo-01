@@ -7,6 +7,7 @@ import com.nocountry.qualitytrack.notification.email.EmailService;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
 import com.nocountry.qualitytrack.users.entity.User;
+import com.nocountry.qualitytrack.users.enums.AccountType;
 import com.nocountry.qualitytrack.users.enums.UserStatus;
 import com.nocountry.qualitytrack.users.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -39,6 +40,12 @@ class EmailVerificationServiceTest {
 
     @Mock
     private TokenCleanupService tokenCleanupService;
+
+    @Mock
+    private User trustedUser;
+
+    @Mock
+    private EmailVerificationToken existingToken;
 
     private OpaqueTokenService opaqueTokenService;
     private EmailVerificationService service;
@@ -76,6 +83,20 @@ class EmailVerificationServiceTest {
         assertEquals(UserStatus.ACTIVE, user.getStatus());
         assertNotNull(user.getEmailVerifiedAt());
         verify(tokenRepository).delete(token);
+    }
+
+    @Test
+    void trustedEmailProofVerifiesPendingCustomerAndConsumesOrdinaryToken() {
+        Instant verifiedAt = Instant.now();
+        when(trustedUser.getAccountType()).thenReturn(AccountType.CUSTOMER);
+        when(trustedUser.getStatus()).thenReturn(UserStatus.PENDING_VERIFICATION);
+        when(trustedUser.getId()).thenReturn(10L);
+        when(tokenRepository.findById(10L)).thenReturn(Optional.of(existingToken));
+
+        service.verifyWithTrustedEmailProof(trustedUser, verifiedAt);
+
+        verify(trustedUser).verifyEmail(verifiedAt);
+        verify(tokenRepository).delete(existingToken);
     }
 
     @Test

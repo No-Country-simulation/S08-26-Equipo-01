@@ -13,6 +13,7 @@ public class TransactionalEmailFactory {
     private static final String ACCOUNT_ACTION_TEMPLATE = "email/account-action";
     private static final String VERIFICATION_PATH = "/verify-email";
     private static final String PASSWORD_RESET_PATH = "/reset-password";
+    private static final String CUSTOMER_INVITATION_PATH = "/customer-invitations/accept";
 
     private final TemplateEngine templateEngine;
     private final String frontendBaseUrl;
@@ -59,6 +60,24 @@ public class TransactionalEmailFactory {
         );
     }
 
+    public EmailContent customerInvitation(String token, String customerName, String role) {
+        String actionUrl = buildActionUrl(CUSTOMER_INVITATION_PATH, token);
+        String roleLabel = roleLabel(role);
+
+        return buildContent(
+                "Invitación a " + customerName + " | QualityTrack",
+                "Has recibido una invitación para unirte a una empresa en QualityTrack.",
+                "Empresa",
+                "Invitación de miembro",
+                "Únete a " + customerName,
+                "Te invitaron a formar parte de esta empresa con el rol de " + roleLabel + ".",
+                "Revisar invitación",
+                "Abre la invitación para revisar la empresa y el rol. Al aceptar, si ya tienes cuenta quedarás incorporado; si eres nuevo, te pediremos los datos mínimos para crearla y completar la incorporación.",
+                actionUrl,
+                "Si no esperabas esta invitación, puedes ignorar el mensaje. El enlace es personal y no debes compartirlo."
+        );
+    }
+
     private EmailContent buildContent(
             String subject,
             String preheader,
@@ -97,6 +116,19 @@ public class TransactionalEmailFactory {
         // The fragment is intentionally used instead of a query parameter so it is not sent to the frontend server
         // or included in HTTP Referer headers. The SPA reads it and sends the token to the backend in the request body.
         return frontendBaseUrl + path + "#token=" + token;
+    }
+
+    private String roleLabel(String role) {
+        if (role == null) {
+            return "miembro";
+        }
+
+        return switch (role) {
+            case "ADMIN" -> "administrador";
+            case "REQUESTER" -> "solicitante";
+            case "VIEWER" -> "lector";
+            default -> "miembro";
+        };
     }
 
     private String normalizeBaseUrl(String baseUrl) {

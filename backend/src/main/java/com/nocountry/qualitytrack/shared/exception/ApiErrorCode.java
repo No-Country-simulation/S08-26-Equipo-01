@@ -15,6 +15,8 @@ public enum ApiErrorCode {
     VERIFICATION_NOT_AVAILABLE(HttpStatus.BAD_REQUEST, "Verificación no disponible"),
     INVALID_PASSWORD_RESET_TOKEN(HttpStatus.BAD_REQUEST, "Token de restablecimiento inválido"),
     PASSWORD_RESET_TOKEN_EXPIRED(HttpStatus.GONE, "Token de restablecimiento expirado"),
+    INVALID_CUSTOMER_INVITATION_TOKEN(HttpStatus.BAD_REQUEST, "Invitación inválida"),
+    CUSTOMER_INVITATION_EXPIRED(HttpStatus.GONE, "Invitación expirada"),
     EMAIL_DELIVERY_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "Servicio de correo no disponible"),
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "Recurso no encontrado"),
     METHOD_NOT_ALLOWED(HttpStatus.METHOD_NOT_ALLOWED, "Método no permitido"),
