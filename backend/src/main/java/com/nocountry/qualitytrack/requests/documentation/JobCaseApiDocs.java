@@ -1,4 +1,4 @@
-package com.nocountry.qualitytrack.customers.documentation;
+package com.nocountry.qualitytrack.requests.documentation;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 
@@ -12,8 +12,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Tag(
-        name = "02 · Empresas cliente",
-        description = "Gestión de empresas cliente y sus membresías."
+        name = "05 · Expedientes",
+        description = "Consulta interna de expedientes asociados a solicitudes de cliente."
 )
-public @interface CustomerApiDocs {
+public @interface JobCaseApiDocs {
 }

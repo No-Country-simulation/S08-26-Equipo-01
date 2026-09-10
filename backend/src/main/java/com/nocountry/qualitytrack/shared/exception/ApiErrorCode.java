@@ -7,6 +7,7 @@ public enum ApiErrorCode {
     MALFORMED_REQUEST(HttpStatus.BAD_REQUEST, "Solicitud inválida"),
     EMAIL_ALREADY_EXISTS(HttpStatus.CONFLICT, "Conflicto"),
     DATA_CONFLICT(HttpStatus.CONFLICT, "Conflicto"),
+    CUSTOMER_REQUEST_CANNOT_BE_CANCELLED(HttpStatus.CONFLICT, "Solicitud no cancelable"),
     INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "Credenciales inválidas"),
     AUTHENTICATION_REQUIRED(HttpStatus.UNAUTHORIZED, "Autenticación requerida"),
     ACCESS_DENIED(HttpStatus.FORBIDDEN, "Acceso denegado"),
