@@ -5,5 +5,7 @@ public enum SystemRole {
     COMMERCIAL,
     ENGINEERING,
     PRODUCTION,
-    QUALITY
+    QUALITY,
+    LOGISTICS,
+    AUDITOR
 }
