@@ -10,7 +10,7 @@ target/
 !.env.example
 
 ### Local document storage ###
-storage/
+/storage/
 
 ### STS ###
 .apt_generated
