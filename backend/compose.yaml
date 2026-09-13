@@ -27,11 +27,15 @@ services:
       DB_NAME: ${DB_NAME:-qualitytrack}
       DB_USER: ${DB_USER:-qualitytrack}
       DB_PASSWORD: ${DB_PASSWORD:-qualitytrack}
+      DOCUMENT_STORAGE_ROOT: /app/storage/documents
     ports:
       - "${BACKEND_PORT:-8085}:8080"
+    volumes:
+      - qualitytrack-document-storage:/app/storage
     depends_on:
       db:
         condition: service_healthy
 
 volumes:
   qualitytrack-postgres-data:
+  qualitytrack-document-storage:

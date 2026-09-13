@@ -9,6 +9,9 @@ target/
 .env.*
 !.env.example
 
+### Local document storage ###
+storage/
+
 ### STS ###
 .apt_generated
 .classpath

@@ -14,7 +14,9 @@ FROM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
 
-RUN useradd --system --uid 10001 qualitytrack
+RUN useradd --system --uid 10001 qualitytrack \
+    && mkdir -p /app/storage/documents \
+    && chown -R 10001:10001 /app/storage
 
 COPY --from=builder /app/target/*.jar app.jar
 

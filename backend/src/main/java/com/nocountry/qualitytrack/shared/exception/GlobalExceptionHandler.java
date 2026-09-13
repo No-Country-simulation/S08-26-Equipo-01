@@ -12,6 +12,8 @@ import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
+import org.springframework.web.multipart.support.MissingServletRequestPartException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.List;
@@ -56,6 +58,24 @@ public class GlobalExceptionHandler {
         return problemDetailFactory.create(
                 ApiErrorCode.MALFORMED_REQUEST,
                 "No se pudo interpretar el cuerpo de la solicitud.",
+                request
+        );
+    }
+
+    @ExceptionHandler(MissingServletRequestPartException.class)
+    ProblemDetail handleMissingRequestPart(MissingServletRequestPartException exception, HttpServletRequest request) {
+        return problemDetailFactory.create(
+                ApiErrorCode.MALFORMED_REQUEST,
+                "Falta una parte requerida de la solicitud multipart: " + exception.getRequestPartName() + ".",
+                request
+        );
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ProblemDetail handleMaxUploadSize(MaxUploadSizeExceededException exception, HttpServletRequest request) {
+        return problemDetailFactory.create(
+                ApiErrorCode.DOCUMENT_FILE_TOO_LARGE,
+                "El archivo supera el tamaño máximo permitido.",
                 request
         );
     }

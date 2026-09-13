@@ -53,6 +53,9 @@ class CustomerRequestServiceTest {
     private RequestReferenceGenerator referenceGenerator;
 
     @Mock
+    private CustomerRequestDocumentService customerRequestDocumentService;
+
+    @Mock
     private CustomerMembership membership;
 
     @Mock
@@ -69,7 +72,8 @@ class CustomerRequestServiceTest {
                 customerRequestRepository,
                 jobCaseRepository,
                 membershipRepository,
-                referenceGenerator
+                referenceGenerator,
+                customerRequestDocumentService
         );
     }
 
@@ -191,6 +195,7 @@ class CustomerRequestServiceTest {
         );
 
         assertEquals(ApiErrorCode.RESOURCE_NOT_FOUND, exception.getCode());
+        verify(customerRequestDocumentService, never()).listCurrent(any(), any());
     }
 
     @Test

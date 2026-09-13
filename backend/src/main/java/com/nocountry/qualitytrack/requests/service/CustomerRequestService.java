@@ -7,7 +7,9 @@ import com.nocountry.qualitytrack.customers.enums.CustomerStatus;
 import com.nocountry.qualitytrack.customers.repository.CustomerMembershipRepository;
 import com.nocountry.qualitytrack.requests.dto.request.CancelCustomerRequest;
 import com.nocountry.qualitytrack.requests.dto.request.SubmitCustomerRequest;
+import com.nocountry.qualitytrack.requests.dto.response.CustomerRequestDetailResponse;
 import com.nocountry.qualitytrack.requests.dto.response.CustomerRequestResponse;
+import com.nocountry.qualitytrack.requests.dto.response.RequestDocumentResponse;
 import com.nocountry.qualitytrack.requests.entity.CustomerRequest;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.requests.repository.CustomerRequestRepository;
@@ -29,6 +31,7 @@ public class CustomerRequestService {
     private final JobCaseRepository jobCaseRepository;
     private final CustomerMembershipRepository membershipRepository;
     private final RequestReferenceGenerator referenceGenerator;
+    private final CustomerRequestDocumentService customerRequestDocumentService;
 
     @Transactional
     public CustomerRequestResponse submit(
@@ -83,7 +86,7 @@ public class CustomerRequestService {
     }
 
     @Transactional(readOnly = true)
-    public CustomerRequestResponse getForCustomer(
+    public CustomerRequestDetailResponse getForCustomer(
             Long currentUserId,
             Long customerId,
             Long requestId
@@ -97,7 +100,14 @@ public class CustomerRequestService {
                         "No se encontró la solicitud."
                 ));
 
-        return CustomerRequestResponse.from(jobCase.getCustomerRequest(), jobCase);
+        CustomerRequestResponse request = CustomerRequestResponse.from(
+                jobCase.getCustomerRequest(),
+                jobCase
+        );
+        List<RequestDocumentResponse> documents = customerRequestDocumentService
+                .listCurrent(currentUserId, jobCase);
+
+        return CustomerRequestDetailResponse.from(request, documents);
     }
 
     @Transactional

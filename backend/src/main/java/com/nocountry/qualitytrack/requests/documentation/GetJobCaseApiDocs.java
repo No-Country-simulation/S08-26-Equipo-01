@@ -19,7 +19,7 @@ import java.lang.annotation.Target;
 @Documented
 @Operation(
         summary = "Consultar expediente",
-        description = "Consulta un JobCase específico junto con la solicitud de cliente que lo originó. El expediente conserva el workflow interno separado del requerimiento original del cliente. En esta primera etapa pueden consultarlo cuentas INTERNAL con rol ADMIN, COMMERCIAL, ENGINEERING o AUDITOR y la operación no modifica su estado."
+        description = "Consulta un JobCase específico junto con la solicitud de cliente que lo originó y sus documentos activos con la versión actual de cada uno. El historial completo de versiones se consulta mediante el endpoint contextual del documento. En esta primera etapa pueden consultarlo cuentas INTERNAL con rol ADMIN, COMMERCIAL, ENGINEERING o AUDITOR y la operación no modifica su estado."
 )
 @ApiResponses({
         @ApiResponse(

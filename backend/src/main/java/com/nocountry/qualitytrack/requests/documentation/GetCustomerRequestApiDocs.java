@@ -18,8 +18,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Operation(
-        summary = "Consultar solicitud de cliente",
-        description = "Consulta una solicitud específica dentro de una empresa. El backend comprueba primero que el usuario mantenga una membresía ACTIVE en esa empresa y después que la solicitud pertenezca realmente a ella. La respuesta incluye el estado actual del JobCase asociado, que representa el seguimiento interno del requerimiento."
+        summary = "Consultar detalle de solicitud de cliente",
+        description = "Consulta una solicitud específica dentro de una empresa. La respuesta incluye el JobCase asociado y los documentos ACTIVE visibles para el usuario. De cada documento se devuelve únicamente su versión actual, con URLs para vista previa y descarga. El historial completo se consulta bajo el endpoint de versiones del documento."
 )
 @ApiResponses({
         @ApiResponse(
@@ -38,7 +38,7 @@ import java.lang.annotation.Target;
         ),
         @ApiResponse(
                 responseCode = "403",
-                description = "El usuario no tiene una membresía activa en la empresa",
+                description = "El usuario no tiene una membresía activa en la empresa o no puede consultar sus documentos",
                 content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class), examples = @ExampleObject(value = RequestApiExamples.ACCESS_DENIED))
         ),
         @ApiResponse(

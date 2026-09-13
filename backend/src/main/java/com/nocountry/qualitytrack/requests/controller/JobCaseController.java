@@ -4,6 +4,7 @@ import com.nocountry.qualitytrack.auth.security.CurrentUserId;
 import com.nocountry.qualitytrack.requests.documentation.GetJobCaseApiDocs;
 import com.nocountry.qualitytrack.requests.documentation.JobCaseApiDocs;
 import com.nocountry.qualitytrack.requests.documentation.ListJobCasesApiDocs;
+import com.nocountry.qualitytrack.requests.dto.response.JobCaseDetailResponse;
 import com.nocountry.qualitytrack.requests.dto.response.JobCaseResponse;
 import com.nocountry.qualitytrack.requests.service.JobCaseService;
 import com.nocountry.qualitytrack.shared.response.ApiResponse;
@@ -41,11 +42,11 @@ public class JobCaseController {
 
     @GetJobCaseApiDocs
     @GetMapping("/{caseId}")
-    public ResponseEntity<ApiResponse<JobCaseResponse>> get(
+    public ResponseEntity<ApiResponse<JobCaseDetailResponse>> get(
             @CurrentUserId Long currentUserId,
             @PathVariable Long caseId
     ) {
-        JobCaseResponse response = jobCaseService.get(currentUserId, caseId);
+        JobCaseDetailResponse response = jobCaseService.get(currentUserId, caseId);
 
         return ResponseEntity.ok(ApiResponse.success(
                 ApiSuccessCode.JOB_CASE_RETRIEVED,

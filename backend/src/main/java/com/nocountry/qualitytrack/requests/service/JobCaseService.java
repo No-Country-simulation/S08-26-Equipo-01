@@ -1,6 +1,8 @@
 package com.nocountry.qualitytrack.requests.service;
 
+import com.nocountry.qualitytrack.requests.dto.response.JobCaseDetailResponse;
 import com.nocountry.qualitytrack.requests.dto.response.JobCaseResponse;
+import com.nocountry.qualitytrack.requests.dto.response.RequestDocumentResponse;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
@@ -24,6 +26,7 @@ public class JobCaseService {
     private final JobCaseRepository jobCaseRepository;
     private final UserRepository userRepository;
     private final UserSystemRoleRepository userSystemRoleRepository;
+    private final CustomerRequestDocumentService customerRequestDocumentService;
 
     @Transactional(readOnly = true)
     public List<JobCaseResponse> list(Long currentUserId) {
@@ -36,7 +39,7 @@ public class JobCaseService {
     }
 
     @Transactional(readOnly = true)
-    public JobCaseResponse get(Long currentUserId, Long caseId) {
+    public JobCaseDetailResponse get(Long currentUserId, Long caseId) {
         requireCanReadJobCases(currentUserId);
 
         JobCase jobCase = jobCaseRepository.findById(caseId)
@@ -45,7 +48,10 @@ public class JobCaseService {
                         "No se encontró el expediente."
                 ));
 
-        return JobCaseResponse.from(jobCase);
+        List<RequestDocumentResponse> documents = customerRequestDocumentService
+                .listCurrent(currentUserId, jobCase);
+
+        return JobCaseDetailResponse.from(JobCaseResponse.from(jobCase), documents);
     }
 
     private void requireCanReadJobCases(Long userId) {

@@ -67,7 +67,31 @@ final class RequestApiExamples {
                   "cancelledByUserId": null,
                   "cancelledAt": null,
                   "cancellationReason": null
-                }
+                },
+                "documents": [
+                  {
+                    "id": 7,
+                    "documentType": "DRAWING",
+                    "name": "Plano de eje",
+                    "description": "Plano recibido del cliente.",
+                    "createdByUserId": 42,
+                    "createdByName": "Ana López",
+                    "createdAt": "2026-09-10T10:00:00Z",
+                    "currentVersion": {
+                      "id": 22,
+                      "version": 2,
+                      "fileName": "plano-eje-rev-b.pdf",
+                      "mimeType": "application/pdf",
+                      "fileSize": 251304,
+                      "checksum": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+                      "uploadedByUserId": 42,
+                      "uploadedByName": "Ana López",
+                      "uploadedAt": "2026-09-10T12:30:00Z",
+                      "contentUrl": "/api/v1/customers/20/requests/31/documents/7/versions/22/content",
+                      "downloadUrl": "/api/v1/customers/20/requests/31/documents/7/versions/22/content?download=true"
+                    }
+                  }
+                ]
               }
             }
             """;
@@ -177,7 +201,31 @@ final class RequestApiExamples {
                   "requestedByUserId": 42,
                   "requestedByName": "Ana López",
                   "submittedAt": "2026-09-10T10:00:00Z"
-                }
+                },
+                "documents": [
+                  {
+                    "id": 7,
+                    "documentType": "DRAWING",
+                    "name": "Plano de eje",
+                    "description": "Plano recibido del cliente.",
+                    "createdByUserId": 42,
+                    "createdByName": "Ana López",
+                    "createdAt": "2026-09-10T10:00:00Z",
+                    "currentVersion": {
+                      "id": 22,
+                      "version": 2,
+                      "fileName": "plano-eje-rev-b.pdf",
+                      "mimeType": "application/pdf",
+                      "fileSize": 251304,
+                      "checksum": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+                      "uploadedByUserId": 42,
+                      "uploadedByName": "Ana López",
+                      "uploadedAt": "2026-09-10T12:30:00Z",
+                      "contentUrl": "/api/v1/customers/20/requests/31/documents/7/versions/22/content",
+                      "downloadUrl": "/api/v1/customers/20/requests/31/documents/7/versions/22/content?download=true"
+                    }
+                  }
+                ]
               }
             }
             """;
