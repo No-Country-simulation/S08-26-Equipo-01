@@ -4,6 +4,7 @@ import com.nocountry.qualitytrack.documents.dto.request.CreateDocumentRequest;
 import com.nocountry.qualitytrack.documents.dto.response.DocumentResponse;
 import com.nocountry.qualitytrack.documents.dto.response.DocumentVersionResponse;
 import com.nocountry.qualitytrack.documents.service.DocumentService;
+import com.nocountry.qualitytrack.documents.service.DocumentVersionMutationResult;
 import com.nocountry.qualitytrack.requests.dto.request.CreateRequestDocument;
 import com.nocountry.qualitytrack.requests.dto.response.RequestDocumentResponse;
 import com.nocountry.qualitytrack.requests.dto.response.RequestDocumentVersionResponse;
@@ -11,6 +12,9 @@ import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
+import com.nocountry.qualitytrack.traceability.enums.TraceabilityAggregateType;
+import com.nocountry.qualitytrack.traceability.enums.TraceabilityEventType;
+import com.nocountry.qualitytrack.traceability.service.TraceabilityService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,10 +23,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
 
 import java.time.Instant;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,6 +42,9 @@ class CustomerRequestDocumentServiceTest {
 
     @Mock
     private DocumentService documentService;
+
+    @Mock
+    private TraceabilityService traceabilityService;
 
     @Mock
     private JobCase jobCase;
@@ -51,7 +61,8 @@ class CustomerRequestDocumentServiceTest {
     void setUp() {
         service = new CustomerRequestDocumentService(
                 jobCaseRepository,
-                documentService
+                documentService,
+                traceabilityService
         );
     }
 
@@ -95,6 +106,21 @@ class CustomerRequestDocumentServiceTest {
         assertEquals(
                 "/api/v1/customers/20/requests/31/documents/7/versions/21/content?download=true",
                 result.currentVersion().downloadUrl()
+        );
+        verify(traceabilityService).record(
+                eq(jobCase),
+                eq(TraceabilityAggregateType.DOCUMENT),
+                eq(7L),
+                eq(TraceabilityEventType.DOCUMENT_ADDED),
+                any(),
+                any(),
+                eq(10L),
+                eq(Map.of(
+                        "requestId", 31L,
+                        "documentType", "DRAWING",
+                        "documentName", "Plano de eje",
+                        "fileName", "plano.pdf"
+                ))
         );
     }
 
@@ -150,9 +176,9 @@ class CustomerRequestDocumentServiceTest {
         when(jobCaseRepository.findByCustomerRequest_IdAndCustomerRequest_Customer_Id(31L, 20L))
                 .thenReturn(Optional.of(jobCase));
         when(jobCase.getId()).thenReturn(73L);
-        when(documentService.addVersion(10L, 73L, 7L, file))
-                .thenReturn(versionResponse);
         stubVersionResponse();
+        when(documentService.addVersion(10L, 73L, 7L, file))
+                .thenReturn(new DocumentVersionMutationResult(versionResponse, "Plano de eje"));
 
         RequestDocumentVersionResponse result = service.addVersion(
                 10L,
@@ -166,6 +192,22 @@ class CustomerRequestDocumentServiceTest {
                 "/api/v1/customers/20/requests/31/documents/7/versions/21/content",
                 result.contentUrl()
         );
+        verify(traceabilityService).record(
+                eq(jobCase),
+                eq(TraceabilityAggregateType.DOCUMENT_VERSION),
+                eq(21L),
+                eq(TraceabilityEventType.DOCUMENT_VERSION_ADDED),
+                any(),
+                any(),
+                eq(10L),
+                eq(Map.of(
+                        "requestId", 31L,
+                        "documentId", 7L,
+                        "documentName", "Plano de eje",
+                        "version", 1,
+                        "fileName", "plano.pdf"
+                ))
+        );
     }
 
     @Test
@@ -173,10 +215,24 @@ class CustomerRequestDocumentServiceTest {
         when(jobCaseRepository.findByCustomerRequest_IdAndCustomerRequest_Customer_Id(31L, 20L))
                 .thenReturn(Optional.of(jobCase));
         when(jobCase.getId()).thenReturn(73L);
+        when(documentService.remove(10L, 73L, 7L)).thenReturn("Plano de eje");
 
         service.remove(10L, 20L, 31L, 7L);
 
         verify(documentService).remove(10L, 73L, 7L);
+        verify(traceabilityService).record(
+                eq(jobCase),
+                eq(TraceabilityAggregateType.DOCUMENT),
+                eq(7L),
+                eq(TraceabilityEventType.DOCUMENT_REMOVED),
+                any(),
+                any(),
+                eq(10L),
+                eq(Map.of(
+                        "requestId", 31L,
+                        "documentName", "Plano de eje"
+                ))
+        );
     }
 
     @Test

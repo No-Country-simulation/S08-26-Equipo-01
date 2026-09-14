@@ -12,16 +12,22 @@ import com.nocountry.qualitytrack.requests.dto.response.CustomerRequestResponse;
 import com.nocountry.qualitytrack.requests.dto.response.RequestDocumentResponse;
 import com.nocountry.qualitytrack.requests.entity.CustomerRequest;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
+import com.nocountry.qualitytrack.requests.enums.JobCaseStatus;
 import com.nocountry.qualitytrack.requests.repository.CustomerRequestRepository;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
+import com.nocountry.qualitytrack.traceability.enums.TraceabilityAggregateType;
+import com.nocountry.qualitytrack.traceability.enums.TraceabilityEventType;
+import com.nocountry.qualitytrack.traceability.service.TraceabilityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -32,6 +38,7 @@ public class CustomerRequestService {
     private final CustomerMembershipRepository membershipRepository;
     private final RequestReferenceGenerator referenceGenerator;
     private final CustomerRequestDocumentService customerRequestDocumentService;
+    private final TraceabilityService traceabilityService;
 
     @Transactional
     public CustomerRequestResponse submit(
@@ -70,6 +77,36 @@ public class CustomerRequestService {
                 Instant.now()
         );
         jobCase = jobCaseRepository.saveAndFlush(jobCase);
+
+        traceabilityService.record(
+                jobCase,
+                TraceabilityAggregateType.CUSTOMER_REQUEST,
+                request.getId(),
+                TraceabilityEventType.REQUEST_SUBMITTED,
+                null,
+                null,
+                currentUserId,
+                metadata(
+                        "requestNumber", request.getRequestNumber(),
+                        "customerId", customerId,
+                        "title", request.getTitle()
+                )
+        );
+
+        traceabilityService.record(
+                jobCase,
+                TraceabilityAggregateType.JOB_CASE,
+                jobCase.getId(),
+                TraceabilityEventType.JOB_CASE_CREATED,
+                null,
+                jobCase.getStatus().name(),
+                currentUserId,
+                metadata(
+                        "caseNumber", jobCase.getCaseNumber(),
+                        "requestId", request.getId(),
+                        "requestNumber", request.getRequestNumber()
+                )
+        );
 
         return CustomerRequestResponse.from(request, jobCase);
     }
@@ -134,12 +171,30 @@ public class CustomerRequestService {
             );
         }
 
+        JobCaseStatus previousStatus = jobCase.getStatus();
+        String reason = normalizeNullable(input == null ? null : input.reason());
+
         jobCase.cancel(
                 membership.getUser(),
-                normalizeNullable(input == null ? null : input.reason()),
+                reason,
                 Instant.now()
         );
         jobCase = jobCaseRepository.saveAndFlush(jobCase);
+
+        traceabilityService.record(
+                jobCase,
+                TraceabilityAggregateType.JOB_CASE,
+                jobCase.getId(),
+                TraceabilityEventType.CUSTOMER_REQUEST_CANCELLED,
+                previousStatus.name(),
+                jobCase.getStatus().name(),
+                currentUserId,
+                metadata(
+                        "requestId", requestId,
+                        "requestNumber", jobCase.getCustomerRequest().getRequestNumber(),
+                        "reason", reason
+                )
+        );
 
         return CustomerRequestResponse.from(jobCase.getCustomerRequest(), jobCase);
     }
@@ -174,6 +229,18 @@ public class CustomerRequestService {
                     "Tu rol dentro de la empresa no permite cancelar solicitudes."
             );
         }
+    }
+
+    private Map<String, Object> metadata(Object... entries) {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        for (int index = 0; index < entries.length; index += 2) {
+            String key = (String) entries[index];
+            Object value = entries[index + 1];
+            if (value != null) {
+                metadata.put(key, value);
+            }
+        }
+        return metadata;
     }
 
     private String normalizeNullable(String value) {

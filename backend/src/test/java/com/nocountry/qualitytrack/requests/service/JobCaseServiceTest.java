@@ -9,6 +9,8 @@ import com.nocountry.qualitytrack.requests.enums.MaterialRequirementType;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
+import com.nocountry.qualitytrack.traceability.dto.response.TraceabilityEventResponse;
+import com.nocountry.qualitytrack.traceability.service.TraceabilityService;
 import com.nocountry.qualitytrack.users.entity.User;
 import com.nocountry.qualitytrack.users.entity.UserSystemRole;
 import com.nocountry.qualitytrack.users.enums.AccountType;
@@ -48,6 +50,9 @@ class JobCaseServiceTest {
     private CustomerRequestDocumentService customerRequestDocumentService;
 
     @Mock
+    private TraceabilityService traceabilityService;
+
+    @Mock
     private User user;
 
     @Mock
@@ -65,6 +70,9 @@ class JobCaseServiceTest {
     @Mock
     private Customer customer;
 
+    @Mock
+    private TraceabilityEventResponse traceabilityEventResponse;
+
     private JobCaseService service;
 
     @BeforeEach
@@ -73,7 +81,8 @@ class JobCaseServiceTest {
                 jobCaseRepository,
                 userRepository,
                 userSystemRoleRepository,
-                customerRequestDocumentService
+                customerRequestDocumentService,
+                traceabilityService
         );
     }
 
@@ -133,6 +142,32 @@ class JobCaseServiceTest {
         assertEquals(1, response.documents().size());
         assertEquals(7L, response.documents().get(0).id());
         verify(customerRequestDocumentService).listCurrent(10L, jobCase);
+    }
+
+    @Test
+    void returnsTimelineForAuthorizedInternalUser() {
+        allowInternal(SystemRole.AUDITOR);
+        when(jobCaseRepository.existsById(12L)).thenReturn(true);
+        when(traceabilityService.timeline(12L)).thenReturn(List.of(traceabilityEventResponse));
+
+        var response = service.timeline(10L, 12L);
+
+        assertEquals(1, response.size());
+        verify(traceabilityService).timeline(12L);
+    }
+
+    @Test
+    void returnsNotFoundWhenTimelineCaseDoesNotExist() {
+        allowInternal(SystemRole.COMMERCIAL);
+        when(jobCaseRepository.existsById(99L)).thenReturn(false);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.timeline(10L, 99L)
+        );
+
+        assertEquals(ApiErrorCode.RESOURCE_NOT_FOUND, exception.getCode());
+        verify(traceabilityService, never()).timeline(99L);
     }
 
     @Test

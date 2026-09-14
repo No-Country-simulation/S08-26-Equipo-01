@@ -5,6 +5,7 @@ import com.nocountry.qualitytrack.documents.dto.response.DocumentResponse;
 import com.nocountry.qualitytrack.documents.dto.response.DocumentVersionResponse;
 import com.nocountry.qualitytrack.documents.service.DocumentDownload;
 import com.nocountry.qualitytrack.documents.service.DocumentService;
+import com.nocountry.qualitytrack.documents.service.DocumentVersionMutationResult;
 import com.nocountry.qualitytrack.requests.dto.request.CreateRequestDocument;
 import com.nocountry.qualitytrack.requests.dto.response.RequestDocumentResponse;
 import com.nocountry.qualitytrack.requests.dto.response.RequestDocumentVersionResponse;
@@ -12,12 +13,17 @@ import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
+import com.nocountry.qualitytrack.traceability.enums.TraceabilityAggregateType;
+import com.nocountry.qualitytrack.traceability.enums.TraceabilityEventType;
+import com.nocountry.qualitytrack.traceability.service.TraceabilityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -28,6 +34,7 @@ public class CustomerRequestDocumentService {
 
     private final JobCaseRepository jobCaseRepository;
     private final DocumentService documentService;
+    private final TraceabilityService traceabilityService;
 
     @Transactional
     public RequestDocumentResponse create(
@@ -47,6 +54,22 @@ public class CustomerRequestDocumentService {
                         metadata == null ? null : metadata.description()
                 ),
                 file
+        );
+
+        traceabilityService.record(
+                jobCase,
+                TraceabilityAggregateType.DOCUMENT,
+                document.id(),
+                TraceabilityEventType.DOCUMENT_ADDED,
+                null,
+                null,
+                currentUserId,
+                metadata(
+                        "requestId", requestId,
+                        "documentType", document.documentType(),
+                        "documentName", document.name(),
+                        "fileName", document.currentVersion() == null ? null : document.currentVersion().fileName()
+                )
         );
 
         return RequestDocumentResponse.from(document, customerId, requestId);
@@ -75,11 +98,29 @@ public class CustomerRequestDocumentService {
             MultipartFile file
     ) {
         JobCase jobCase = requireJobCase(customerId, requestId);
-        DocumentVersionResponse version = documentService.addVersion(
+        DocumentVersionMutationResult result = documentService.addVersion(
                 currentUserId,
                 jobCase.getId(),
                 documentId,
                 file
+        );
+        DocumentVersionResponse version = result.version();
+
+        traceabilityService.record(
+                jobCase,
+                TraceabilityAggregateType.DOCUMENT_VERSION,
+                version.id(),
+                TraceabilityEventType.DOCUMENT_VERSION_ADDED,
+                null,
+                null,
+                currentUserId,
+                metadata(
+                        "requestId", requestId,
+                        "documentId", documentId,
+                        "documentName", result.documentName(),
+                        "version", version.version(),
+                        "fileName", version.fileName()
+                )
         );
 
         return RequestDocumentVersionResponse.from(
@@ -138,7 +179,21 @@ public class CustomerRequestDocumentService {
             Long documentId
     ) {
         JobCase jobCase = requireJobCase(customerId, requestId);
-        documentService.remove(currentUserId, jobCase.getId(), documentId);
+        String documentName = documentService.remove(currentUserId, jobCase.getId(), documentId);
+
+        traceabilityService.record(
+                jobCase,
+                TraceabilityAggregateType.DOCUMENT,
+                documentId,
+                TraceabilityEventType.DOCUMENT_REMOVED,
+                null,
+                null,
+                currentUserId,
+                metadata(
+                        "requestId", requestId,
+                        "documentName", documentName
+                )
+        );
     }
 
     private JobCase requireJobCase(Long customerId, Long requestId) {
@@ -180,5 +235,17 @@ public class CustomerRequestDocumentService {
                 : normalized;
 
         return fileName.isBlank() ? DEFAULT_DOCUMENT_NAME : fileName;
+    }
+
+    private Map<String, Object> metadata(Object... entries) {
+        Map<String, Object> metadata = new LinkedHashMap<>();
+        for (int index = 0; index < entries.length; index += 2) {
+            String key = (String) entries[index];
+            Object value = entries[index + 1];
+            if (value != null) {
+                metadata.put(key, value);
+            }
+        }
+        return metadata;
     }
 }

@@ -2,6 +2,7 @@ package com.nocountry.qualitytrack.requests.controller;
 
 import com.nocountry.qualitytrack.auth.security.CurrentUserId;
 import com.nocountry.qualitytrack.requests.documentation.GetJobCaseApiDocs;
+import com.nocountry.qualitytrack.requests.documentation.GetJobCaseTimelineApiDocs;
 import com.nocountry.qualitytrack.requests.documentation.JobCaseApiDocs;
 import com.nocountry.qualitytrack.requests.documentation.ListJobCasesApiDocs;
 import com.nocountry.qualitytrack.requests.dto.response.JobCaseDetailResponse;
@@ -9,6 +10,7 @@ import com.nocountry.qualitytrack.requests.dto.response.JobCaseResponse;
 import com.nocountry.qualitytrack.requests.service.JobCaseService;
 import com.nocountry.qualitytrack.shared.response.ApiResponse;
 import com.nocountry.qualitytrack.shared.response.ApiSuccessCode;
+import com.nocountry.qualitytrack.traceability.dto.response.TraceabilityEventResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -51,6 +53,21 @@ public class JobCaseController {
         return ResponseEntity.ok(ApiResponse.success(
                 ApiSuccessCode.JOB_CASE_RETRIEVED,
                 "Expediente consultado correctamente.",
+                response
+        ));
+    }
+
+    @GetJobCaseTimelineApiDocs
+    @GetMapping("/{caseId}/timeline")
+    public ResponseEntity<ApiResponse<List<TraceabilityEventResponse>>> timeline(
+            @CurrentUserId Long currentUserId,
+            @PathVariable Long caseId
+    ) {
+        List<TraceabilityEventResponse> response = jobCaseService.timeline(currentUserId, caseId);
+
+        return ResponseEntity.ok(ApiResponse.success(
+                ApiSuccessCode.JOB_CASE_TIMELINE_RETRIEVED,
+                "Trazabilidad del expediente consultada correctamente.",
                 response
         ));
     }

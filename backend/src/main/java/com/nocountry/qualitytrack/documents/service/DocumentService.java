@@ -123,7 +123,7 @@ public class DocumentService {
     }
 
     @Transactional
-    public DocumentVersionResponse addVersion(
+    public DocumentVersionMutationResult addVersion(
             Long currentUserId,
             Long caseId,
             Long documentId,
@@ -162,7 +162,10 @@ public class DocumentService {
         );
         version = documentVersionRepository.saveAndFlush(version);
 
-        return DocumentVersionResponse.from(version);
+        return new DocumentVersionMutationResult(
+                DocumentVersionResponse.from(version),
+                document.getName()
+        );
     }
 
     @Transactional(readOnly = true)
@@ -219,7 +222,7 @@ public class DocumentService {
     }
 
     @Transactional
-    public void remove(
+    public String remove(
             Long currentUserId,
             Long caseId,
             Long documentId
@@ -232,8 +235,10 @@ public class DocumentService {
                 ));
 
         User remover = accessService.requireCanRemove(currentUserId, document);
+        String documentName = document.getName();
         document.remove(remover, Instant.now());
         documentRepository.saveAndFlush(document);
+        return documentName;
     }
 
     private JobCase requireJobCase(Long caseId) {

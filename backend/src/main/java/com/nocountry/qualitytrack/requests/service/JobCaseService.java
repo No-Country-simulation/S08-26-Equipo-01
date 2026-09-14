@@ -7,6 +7,8 @@ import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
+import com.nocountry.qualitytrack.traceability.dto.response.TraceabilityEventResponse;
+import com.nocountry.qualitytrack.traceability.service.TraceabilityService;
 import com.nocountry.qualitytrack.users.entity.User;
 import com.nocountry.qualitytrack.users.entity.UserSystemRole;
 import com.nocountry.qualitytrack.users.enums.AccountType;
@@ -27,6 +29,7 @@ public class JobCaseService {
     private final UserRepository userRepository;
     private final UserSystemRoleRepository userSystemRoleRepository;
     private final CustomerRequestDocumentService customerRequestDocumentService;
+    private final TraceabilityService traceabilityService;
 
     @Transactional(readOnly = true)
     public List<JobCaseResponse> list(Long currentUserId) {
@@ -52,6 +55,20 @@ public class JobCaseService {
                 .listCurrent(currentUserId, jobCase);
 
         return JobCaseDetailResponse.from(JobCaseResponse.from(jobCase), documents);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TraceabilityEventResponse> timeline(Long currentUserId, Long caseId) {
+        requireCanReadJobCases(currentUserId);
+
+        if (!jobCaseRepository.existsById(caseId)) {
+            throw new BusinessException(
+                    ApiErrorCode.RESOURCE_NOT_FOUND,
+                    "No se encontró el expediente."
+            );
+        }
+
+        return traceabilityService.timeline(caseId);
     }
 
     private void requireCanReadJobCases(Long userId) {

@@ -3,7 +3,6 @@ package com.nocountry.qualitytrack.documents.service;
 import com.nocountry.qualitytrack.customers.entity.Customer;
 import com.nocountry.qualitytrack.documents.dto.request.CreateDocumentRequest;
 import com.nocountry.qualitytrack.documents.dto.response.DocumentResponse;
-import com.nocountry.qualitytrack.documents.dto.response.DocumentVersionResponse;
 import com.nocountry.qualitytrack.documents.entity.Document;
 import com.nocountry.qualitytrack.documents.entity.DocumentVersion;
 import com.nocountry.qualitytrack.documents.enums.DocumentStatus;
@@ -157,10 +156,11 @@ class DocumentServiceTest {
         when(documentVersionRepository.saveAndFlush(any(DocumentVersion.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
 
-        DocumentVersionResponse response = service.addVersion(10L, 12L, 7L, file);
+        DocumentVersionMutationResult result = service.addVersion(10L, 12L, 7L, file);
 
-        assertEquals(2, response.version());
-        assertEquals("plano-rev-b.pdf", response.fileName());
+        assertEquals("Plano", result.documentName());
+        assertEquals(2, result.version().version());
+        assertEquals("plano-rev-b.pdf", result.version().fileName());
     }
 
     @Test
@@ -246,8 +246,9 @@ class DocumentServiceTest {
         when(accessService.requireCanRemove(10L, document)).thenReturn(user);
         when(documentRepository.saveAndFlush(document)).thenReturn(document);
 
-        service.remove(10L, 12L, 7L);
+        String removedDocumentName = service.remove(10L, 12L, 7L);
 
+        assertEquals("Plano", removedDocumentName);
         assertEquals(DocumentStatus.REMOVED, document.getStatus());
         assertSame(user, document.getRemovedBy());
         assertNotNull(document.getRemovedAt());

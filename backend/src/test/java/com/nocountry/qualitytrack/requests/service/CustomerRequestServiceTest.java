@@ -17,6 +17,9 @@ import com.nocountry.qualitytrack.requests.repository.CustomerRequestRepository;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
+import com.nocountry.qualitytrack.traceability.enums.TraceabilityAggregateType;
+import com.nocountry.qualitytrack.traceability.enums.TraceabilityEventType;
+import com.nocountry.qualitytrack.traceability.service.TraceabilityService;
 import com.nocountry.qualitytrack.users.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,12 +30,14 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -56,6 +61,9 @@ class CustomerRequestServiceTest {
     private CustomerRequestDocumentService customerRequestDocumentService;
 
     @Mock
+    private TraceabilityService traceabilityService;
+
+    @Mock
     private CustomerMembership membership;
 
     @Mock
@@ -73,7 +81,8 @@ class CustomerRequestServiceTest {
                 jobCaseRepository,
                 membershipRepository,
                 referenceGenerator,
-                customerRequestDocumentService
+                customerRequestDocumentService,
+                traceabilityService
         );
     }
 
@@ -119,6 +128,33 @@ class CustomerRequestServiceTest {
         assertEquals(JobCaseStatus.SUBMITTED, response.jobCase().status());
         verify(customerRequestRepository).saveAndFlush(any(CustomerRequest.class));
         verify(jobCaseRepository).saveAndFlush(any(JobCase.class));
+        verify(traceabilityService).record(
+                any(JobCase.class),
+                eq(TraceabilityAggregateType.CUSTOMER_REQUEST),
+                any(),
+                eq(TraceabilityEventType.REQUEST_SUBMITTED),
+                any(),
+                any(),
+                eq(10L),
+                eq(Map.of(
+                        "requestNumber", "REQ-00000001",
+                        "customerId", 20L,
+                        "title", "Eje de transmisión"
+                ))
+        );
+        verify(traceabilityService).record(
+                any(JobCase.class),
+                eq(TraceabilityAggregateType.JOB_CASE),
+                any(),
+                eq(TraceabilityEventType.JOB_CASE_CREATED),
+                any(),
+                eq(JobCaseStatus.SUBMITTED.name()),
+                eq(10L),
+                eq(Map.of(
+                        "caseNumber", "CASE-00000001",
+                        "requestNumber", "REQ-00000001"
+                ))
+        );
     }
 
     @Test
@@ -244,6 +280,20 @@ class CustomerRequestServiceTest {
         assertNotNull(jobCase.getClosedAt());
         assertEquals(jobCase.getCancelledAt(), jobCase.getClosedAt());
         verify(jobCaseRepository).saveAndFlush(jobCase);
+        verify(traceabilityService).record(
+                eq(jobCase),
+                eq(TraceabilityAggregateType.JOB_CASE),
+                any(),
+                eq(TraceabilityEventType.CUSTOMER_REQUEST_CANCELLED),
+                eq(JobCaseStatus.SUBMITTED.name()),
+                eq(JobCaseStatus.CANCELLED.name()),
+                eq(10L),
+                eq(Map.of(
+                        "requestId", 31L,
+                        "requestNumber", "REQ-00000001",
+                        "reason", "Ya no se requiere la pieza."
+                ))
+        );
     }
 
     @Test
