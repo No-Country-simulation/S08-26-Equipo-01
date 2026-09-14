@@ -5,6 +5,7 @@ import org.springframework.stereotype.Component;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -14,6 +15,7 @@ public class TransactionalEmailFactory {
     private static final String VERIFICATION_PATH = "/verify-email";
     private static final String PASSWORD_RESET_PATH = "/reset-password";
     private static final String CUSTOMER_INVITATION_PATH = "/customer-invitations/accept";
+    private static final String INTERNAL_INVITATION_PATH = "/internal-invitations/accept";
 
     private final TemplateEngine templateEngine;
     private final String frontendBaseUrl;
@@ -78,6 +80,26 @@ public class TransactionalEmailFactory {
         );
     }
 
+    public EmailContent internalInvitation(String token, List<String> roles) {
+        String actionUrl = buildActionUrl(INTERNAL_INVITATION_PATH, token);
+        String roleLabels = roles == null || roles.isEmpty()
+                ? "sin roles asignados"
+                : roles.stream().map(this::roleLabel).reduce((left, right) -> left + ", " + right).orElse("miembro interno");
+
+        return buildContent(
+                "Invitación al equipo interno | QualityTrack",
+                "Has recibido una invitación para incorporarte al equipo interno de QualityTrack.",
+                "Equipo interno",
+                "Invitación de acceso",
+                "Activa tu cuenta interna",
+                "Un administrador te invitó a QualityTrack con los roles: " + roleLabels + ".",
+                "Revisar invitación",
+                "Abre la invitación para revisar tus datos y crear una contraseña. El acceso quedará activo al completar este proceso.",
+                actionUrl,
+                "Si no esperabas esta invitación, puedes ignorar el mensaje. El enlace es personal y no debes compartirlo."
+        );
+    }
+
     private EmailContent buildContent(
             String subject,
             String preheader,
@@ -112,9 +134,6 @@ public class TransactionalEmailFactory {
             throw new IllegalArgumentException("Action token must not be blank.");
         }
 
-        // OpaqueTokenService generates URL-safe Base64 without padding, so the token is safe in a fragment.
-        // The fragment is intentionally used instead of a query parameter so it is not sent to the frontend server
-        // or included in HTTP Referer headers. The SPA reads it and sends the token to the backend in the request body.
         return frontendBaseUrl + path + "#token=" + token;
     }
 
@@ -125,6 +144,12 @@ public class TransactionalEmailFactory {
 
         return switch (role) {
             case "ADMIN" -> "administrador";
+            case "COMMERCIAL" -> "comercial";
+            case "ENGINEERING" -> "ingeniería";
+            case "PRODUCTION" -> "producción";
+            case "QUALITY" -> "calidad";
+            case "LOGISTICS" -> "logística";
+            case "AUDITOR" -> "auditor";
             case "REQUESTER" -> "solicitante";
             case "VIEWER" -> "lector";
             default -> "miembro";

@@ -33,7 +33,9 @@ public class SecurityConfig {
                                 "/api/v1/auth/reset-password",
                                 "/api/v1/customer-invitations/resolve",
                                 "/api/v1/customer-invitations/accept",
-                                "/api/v1/customer-invitations/complete-registration"
+                                "/api/v1/customer-invitations/complete-registration",
+                                "/api/v1/internal/invitations/resolve",
+                                "/api/v1/internal/invitations/accept"
                         ).permitAll()
                         .requestMatchers(
                                 "/v3/api-docs/**",

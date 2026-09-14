@@ -23,6 +23,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -121,5 +122,36 @@ class EmailVerificationServiceTest {
 
         assertEquals(ApiErrorCode.VERIFICATION_TOKEN_EXPIRED, exception.getCode());
         verify(tokenCleanupService).deleteEmailVerificationToken(token.getUserId());
+    }
+
+    @Test
+    void ordinaryVerificationEndpointDoesNotConsumeInternalActivationToken() {
+        String rawToken = "internal-invitation-token";
+        User user = User.inviteInternal(
+                "Ana",
+                "Torres",
+                "ana@qualitytrack.local",
+                "temporary-hash"
+        );
+        Instant now = Instant.now();
+        EmailVerificationToken token = new EmailVerificationToken(
+                user,
+                opaqueTokenService.hash(rawToken),
+                now.plusSeconds(3600),
+                now.minusSeconds(60)
+        );
+
+        when(tokenRepository.findByTokenHash(opaqueTokenService.hash(rawToken)))
+                .thenReturn(Optional.of(token));
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.verify(rawToken)
+        );
+
+        assertEquals(ApiErrorCode.VERIFICATION_NOT_AVAILABLE, exception.getCode());
+        verify(tokenCleanupService, never()).deleteEmailVerificationToken(token.getUserId());
+        verify(tokenRepository, never()).delete(token);
+        assertEquals(UserStatus.PENDING_ACTIVATION, user.getStatus());
     }
 }

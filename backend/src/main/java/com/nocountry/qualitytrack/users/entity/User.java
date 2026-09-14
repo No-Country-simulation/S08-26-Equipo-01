@@ -80,6 +80,47 @@ public class User {
         );
     }
 
+    public static User createActiveInternal(String firstName, String lastName, String email, String passwordHash) {
+        return new User(
+                firstName,
+                lastName,
+                email,
+                passwordHash,
+                AccountType.INTERNAL,
+                UserStatus.ACTIVE
+        );
+    }
+
+    public static User inviteInternal(String firstName, String lastName, String email, String temporaryPasswordHash) {
+        return new User(
+                firstName,
+                lastName,
+                email,
+                temporaryPasswordHash,
+                AccountType.INTERNAL,
+                UserStatus.PENDING_ACTIVATION
+        );
+    }
+
+    public void refreshPendingInternalInvitation(String firstName, String lastName) {
+        if (accountType != AccountType.INTERNAL || status != UserStatus.PENDING_ACTIVATION) {
+            throw new IllegalStateException("Solo una cuenta interna pendiente puede volver a invitarse.");
+        }
+
+        this.firstName = firstName;
+        this.lastName = lastName;
+    }
+
+    public void activateInternal(String passwordHash, Instant activatedAt) {
+        if (accountType != AccountType.INTERNAL || status != UserStatus.PENDING_ACTIVATION) {
+            throw new IllegalStateException("Solo una cuenta interna pendiente puede activarse.");
+        }
+
+        this.passwordHash = passwordHash;
+        this.status = UserStatus.ACTIVE;
+        this.emailVerifiedAt = activatedAt;
+    }
+
     public void verifyEmail(Instant verifiedAt) {
         this.status = UserStatus.ACTIVE;
         this.emailVerifiedAt = verifiedAt;

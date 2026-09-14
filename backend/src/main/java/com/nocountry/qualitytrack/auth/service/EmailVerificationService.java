@@ -95,7 +95,9 @@ public class EmailVerificationService {
         User user = token.getUser();
         if (user.getAccountType() != AccountType.CUSTOMER
                 || user.getStatus() != UserStatus.PENDING_VERIFICATION) {
-            tokenCleanupService.deleteEmailVerificationToken(token.getUserId());
+            if (user.getAccountType() == AccountType.CUSTOMER) {
+                tokenCleanupService.deleteEmailVerificationToken(token.getUserId());
+            }
             throw new BusinessException(
                     ApiErrorCode.VERIFICATION_NOT_AVAILABLE,
                     "La verificación de correo no está disponible para esta cuenta."
@@ -106,12 +108,6 @@ public class EmailVerificationService {
         tokenRepository.delete(token);
     }
 
-    /**
-     * Marks a pending customer account as verified when another trusted proof already demonstrated
-     * control of the destination email, such as a valid one-time customer invitation token.
-     * Any ordinary email-verification token is consumed in the same transaction so no stale
-     * verification credential remains after activation.
-     */
     @Transactional
     public void verifyWithTrustedEmailProof(User user, Instant verifiedAt) {
         if (user.getAccountType() != AccountType.CUSTOMER

@@ -20,6 +20,8 @@ public enum ApiErrorCode {
     PASSWORD_RESET_TOKEN_EXPIRED(HttpStatus.GONE, "Token de restablecimiento expirado"),
     INVALID_CUSTOMER_INVITATION_TOKEN(HttpStatus.BAD_REQUEST, "Invitación inválida"),
     CUSTOMER_INVITATION_EXPIRED(HttpStatus.GONE, "Invitación expirada"),
+    INVALID_INTERNAL_INVITATION_TOKEN(HttpStatus.BAD_REQUEST, "Invitación interna inválida"),
+    INTERNAL_INVITATION_EXPIRED(HttpStatus.GONE, "Invitación interna expirada"),
     EMAIL_DELIVERY_FAILED(HttpStatus.SERVICE_UNAVAILABLE, "Servicio de correo no disponible"),
     DOCUMENT_STORAGE_ERROR(HttpStatus.SERVICE_UNAVAILABLE, "Almacenamiento de documentos no disponible"),
     RESOURCE_NOT_FOUND(HttpStatus.NOT_FOUND, "Recurso no encontrado"),

@@ -1,5 +1,7 @@
 package com.nocountry.qualitytrack.notification.email;
 
+import java.util.List;
+
 public interface EmailService {
 
     void sendVerificationEmail(String recipient, String token);
@@ -11,5 +13,11 @@ public interface EmailService {
             String token,
             String customerName,
             String role
+    );
+
+    void sendInternalInvitationEmail(
+            String recipient,
+            String token,
+            List<String> roles
     );
 }

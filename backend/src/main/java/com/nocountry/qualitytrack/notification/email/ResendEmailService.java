@@ -42,6 +42,11 @@ public class ResendEmailService implements EmailService {
         send(recipient, emailFactory.customerInvitation(token, customerName, role), "customer invitation");
     }
 
+    @Override
+    public void sendInternalInvitationEmail(String recipient, String token, List<String> roles) {
+        send(recipient, emailFactory.internalInvitation(token, roles), "internal invitation");
+    }
+
     private void send(String recipient, EmailContent content, String purpose) {
         try {
             ResendEmailResponse response = restClient.post()

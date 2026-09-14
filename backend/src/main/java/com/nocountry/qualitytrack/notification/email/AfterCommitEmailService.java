@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import java.util.List;
+
 @RequiredArgsConstructor
 public class AfterCommitEmailService implements EmailService {
 
@@ -27,6 +29,11 @@ public class AfterCommitEmailService implements EmailService {
             String role
     ) {
         executeAfterCommit(() -> delegate.sendCustomerInvitationEmail(recipient, token, customerName, role));
+    }
+
+    @Override
+    public void sendInternalInvitationEmail(String recipient, String token, List<String> roles) {
+        executeAfterCommit(() -> delegate.sendInternalInvitationEmail(recipient, token, roles));
     }
 
     private void executeAfterCommit(Runnable action) {
