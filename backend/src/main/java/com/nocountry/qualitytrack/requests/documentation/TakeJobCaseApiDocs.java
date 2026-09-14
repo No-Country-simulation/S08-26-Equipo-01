@@ -18,17 +18,17 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Operation(
-        summary = "Consultar bandeja de expedientes",
-        description = "Devuelve la bandeja interna de JobCase ordenada desde el expediente más reciente. Cada elemento incluye su estado actual, el responsable cuando exista y un resumen de la solicitud que originó el caso, suficiente para construir la vista principal de trabajo sin abrir cada expediente. Solo los usuarios internos con un rol autorizado pueden consultarla. Esta operación es de solo lectura y no modifica asignaciones ni estados."
+        summary = "Tomar expediente e iniciar su revisión",
+        description = "Permite que un COMMERCIAL tome un expediente SUBMITTED que todavía no tiene responsable. La operación lo asigna al usuario autenticado, registra el momento de asignación e inicia la revisión cambiando el estado a UNDER_REVIEW; ADMIN también puede ejecutarla. No existe un paso separado para iniciar la revisión: tomar el expediente significa comenzar a trabajarlo y evita que otro comercial pueda tomarlo después."
 )
 @ApiResponses({
         @ApiResponse(
                 responseCode = "200",
-                description = "Bandeja de expedientes consultada correctamente",
+                description = "El usuario quedó asignado como responsable y el expediente pasó a UNDER_REVIEW",
                 content = @Content(
                         mediaType = "application/json",
                         schema = @Schema(implementation = com.nocountry.qualitytrack.shared.response.ApiResponse.class),
-                        examples = @ExampleObject(value = RequestApiExamples.JOB_CASES_RETRIEVED)
+                        examples = @ExampleObject(value = JobCaseApiExamples.JOB_CASE_REVIEW_STARTED)
                 )
         ),
         @ApiResponse(
@@ -38,9 +38,19 @@ import java.lang.annotation.Target;
         ),
         @ApiResponse(
                 responseCode = "403",
-                description = "La cuenta no es INTERNAL o no posee un rol con acceso a la bandeja de expedientes",
+                description = "La cuenta no es INTERNAL o no posee rol COMMERCIAL/ADMIN para tomar expedientes",
                 content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class), examples = @ExampleObject(value = RequestApiExamples.ACCESS_DENIED))
+        ),
+        @ApiResponse(
+                responseCode = "404",
+                description = "No existe un expediente con el identificador indicado",
+                content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class), examples = @ExampleObject(value = RequestApiExamples.RESOURCE_NOT_FOUND))
+        ),
+        @ApiResponse(
+                responseCode = "409",
+                description = "El expediente ya tiene responsable o ya no está en SUBMITTED",
+                content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class), examples = @ExampleObject(value = JobCaseApiExamples.DATA_CONFLICT))
         )
 })
-public @interface ListJobCasesApiDocs {
+public @interface TakeJobCaseApiDocs {
 }

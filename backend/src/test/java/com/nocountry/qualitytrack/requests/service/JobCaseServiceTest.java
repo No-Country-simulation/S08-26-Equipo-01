@@ -6,6 +6,8 @@ import com.nocountry.qualitytrack.requests.entity.CustomerRequest;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.requests.enums.JobCaseStatus;
 import com.nocountry.qualitytrack.requests.enums.MaterialRequirementType;
+import com.nocountry.qualitytrack.requests.repository.CaseInformationRequestRepository;
+import com.nocountry.qualitytrack.requests.repository.CaseMaterialSpecificationRepository;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
@@ -50,6 +52,12 @@ class JobCaseServiceTest {
     private CustomerRequestDocumentService customerRequestDocumentService;
 
     @Mock
+    private CaseInformationRequestRepository informationRequestRepository;
+
+    @Mock
+    private CaseMaterialSpecificationRepository materialSpecificationRepository;
+
+    @Mock
     private TraceabilityService traceabilityService;
 
     @Mock
@@ -82,6 +90,8 @@ class JobCaseServiceTest {
                 userRepository,
                 userSystemRoleRepository,
                 customerRequestDocumentService,
+                informationRequestRepository,
+                materialSpecificationRepository,
                 traceabilityService
         );
     }
@@ -122,6 +132,9 @@ class JobCaseServiceTest {
         allowInternal(SystemRole.ENGINEERING);
         stubJobCaseDetail();
         when(jobCaseRepository.findById(12L)).thenReturn(Optional.of(jobCase));
+        when(informationRequestRepository.findAllByJobCase_IdOrderByRequestedAtAsc(12L))
+                .thenReturn(List.of());
+        when(materialSpecificationRepository.findByJobCase_Id(12L)).thenReturn(Optional.empty());
 
         RequestDocumentResponse document = new RequestDocumentResponse(
                 7L,
@@ -141,6 +154,7 @@ class JobCaseServiceTest {
         assertEquals(12L, response.id());
         assertEquals(1, response.documents().size());
         assertEquals(7L, response.documents().get(0).id());
+        assertEquals(0, response.informationRequests().size());
         verify(customerRequestDocumentService).listCurrent(10L, jobCase);
     }
 

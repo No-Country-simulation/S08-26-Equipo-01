@@ -18,17 +18,17 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Operation(
-        summary = "Consultar detalle de un expediente",
-        description = "Devuelve la información completa de un JobCase: la solicitud que lo originó, los documentos accesibles, las aclaraciones realizadas y la especificación técnica del material cuando exista. Está pensado para abrir la vista de trabajo y revisar el contexto antes de ejecutar acciones sobre el expediente. Consultarlo no asigna responsable, no inicia la revisión y no modifica ningún estado. Las acciones del workflow se realizan mediante sus endpoints específicos."
+        summary = "Completar la revisión y dejar el expediente listo para cotizar",
+        description = "Marca como terminada la revisión de un expediente en UNDER_REVIEW y lo cambia a READY_FOR_QUOTATION. Solo puede ejecutarlo el COMMERCIAL responsable o un ADMIN, no debe haber aclaraciones pendientes y, si materialRequirementType es ASSISTANCE_REQUIRED, debe existir una especificación técnica del material. El responsable permanece asociado al expediente como referencia de quién llevó la revisión. Esta operación no crea una cotización; únicamente deja el expediente preparado para iniciar ese siguiente proceso."
 )
 @ApiResponses({
         @ApiResponse(
                 responseCode = "200",
-                description = "Detalle del expediente consultado correctamente",
+                description = "La revisión terminó y el expediente pasó a READY_FOR_QUOTATION",
                 content = @Content(
                         mediaType = "application/json",
                         schema = @Schema(implementation = com.nocountry.qualitytrack.shared.response.ApiResponse.class),
-                        examples = @ExampleObject(value = RequestApiExamples.JOB_CASE_RETRIEVED)
+                        examples = @ExampleObject(value = JobCaseApiExamples.JOB_CASE_READY_FOR_QUOTATION)
                 )
         ),
         @ApiResponse(
@@ -38,14 +38,19 @@ import java.lang.annotation.Target;
         ),
         @ApiResponse(
                 responseCode = "403",
-                description = "La cuenta no es INTERNAL o no posee un rol con acceso al expediente",
+                description = "El usuario no es el COMMERCIAL responsable del expediente ni un ADMIN autorizado",
                 content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class), examples = @ExampleObject(value = RequestApiExamples.ACCESS_DENIED))
         ),
         @ApiResponse(
                 responseCode = "404",
                 description = "No existe un expediente con el identificador indicado",
                 content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class), examples = @ExampleObject(value = RequestApiExamples.RESOURCE_NOT_FOUND))
+        ),
+        @ApiResponse(
+                responseCode = "409",
+                description = "El expediente no está en UNDER_REVIEW, existe una aclaración abierta o falta definir el material requerido para una solicitud con ASSISTANCE_REQUIRED",
+                content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class), examples = @ExampleObject(value = JobCaseApiExamples.DATA_CONFLICT))
         )
 })
-public @interface GetJobCaseApiDocs {
+public @interface CompleteJobCaseReviewApiDocs {
 }

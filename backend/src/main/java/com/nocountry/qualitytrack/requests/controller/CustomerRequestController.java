@@ -11,10 +11,13 @@ import com.nocountry.qualitytrack.requests.documentation.DownloadRequestDocument
 import com.nocountry.qualitytrack.requests.documentation.GetCustomerRequestApiDocs;
 import com.nocountry.qualitytrack.requests.documentation.ListCustomerRequestsApiDocs;
 import com.nocountry.qualitytrack.requests.documentation.ListRequestDocumentVersionsApiDocs;
+import com.nocountry.qualitytrack.requests.documentation.RespondCaseInformationRequestApiDocs;
 import com.nocountry.qualitytrack.requests.documentation.SubmitCustomerRequestApiDocs;
 import com.nocountry.qualitytrack.requests.dto.request.CancelCustomerRequest;
 import com.nocountry.qualitytrack.requests.dto.request.CreateRequestDocumentForm;
+import com.nocountry.qualitytrack.requests.dto.request.RespondCaseInformationRequest;
 import com.nocountry.qualitytrack.requests.dto.request.SubmitCustomerRequestForm;
+import com.nocountry.qualitytrack.requests.dto.response.CustomerInformationRequestResponse;
 import com.nocountry.qualitytrack.requests.dto.response.CustomerRequestDetailResponse;
 import com.nocountry.qualitytrack.requests.dto.response.CustomerRequestResponse;
 import com.nocountry.qualitytrack.requests.dto.response.RequestDocumentResponse;
@@ -22,6 +25,7 @@ import com.nocountry.qualitytrack.requests.dto.response.RequestDocumentVersionRe
 import com.nocountry.qualitytrack.requests.service.CustomerRequestDocumentService;
 import com.nocountry.qualitytrack.requests.service.CustomerRequestService;
 import com.nocountry.qualitytrack.requests.service.CustomerRequestSubmissionService;
+import com.nocountry.qualitytrack.requests.service.JobCaseWorkflowService;
 import com.nocountry.qualitytrack.shared.response.ApiResponse;
 import com.nocountry.qualitytrack.shared.response.ApiSuccessCode;
 import jakarta.validation.Valid;
@@ -66,6 +70,7 @@ public class CustomerRequestController {
     private final CustomerRequestService customerRequestService;
     private final CustomerRequestSubmissionService customerRequestSubmissionService;
     private final CustomerRequestDocumentService customerRequestDocumentService;
+    private final JobCaseWorkflowService jobCaseWorkflowService;
 
     @SubmitCustomerRequestApiDocs
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -250,6 +255,30 @@ public class CustomerRequestController {
                 .header(HttpHeaders.CACHE_CONTROL, "private, no-store")
                 .header("X-Content-Type-Options", "nosniff")
                 .body(document.resource());
+    }
+
+    @RespondCaseInformationRequestApiDocs
+    @PostMapping("/{requestId}/information-requests/{informationRequestId}/response")
+    public ResponseEntity<ApiResponse<CustomerInformationRequestResponse>> respondInformationRequest(
+            @CurrentUserId Long currentUserId,
+            @PathVariable Long customerId,
+            @PathVariable Long requestId,
+            @PathVariable Long informationRequestId,
+            @Valid @RequestBody RespondCaseInformationRequest request
+    ) {
+        CustomerInformationRequestResponse response = jobCaseWorkflowService.respondInformation(
+                currentUserId,
+                customerId,
+                requestId,
+                informationRequestId,
+                request
+        );
+
+        return ResponseEntity.ok(ApiResponse.success(
+                ApiSuccessCode.CUSTOMER_INFORMATION_RESPONDED,
+                "Información enviada correctamente.",
+                response
+        ));
     }
 
     @CancelCustomerRequestApiDocs

@@ -67,7 +67,7 @@ class CustomerRequestDocumentServiceTest {
     }
 
     @Test
-    void createsDocumentUsingCaseResolvedFromRequestAndReturnsContextualUrls() {
+    void createsDocumentUsingLockedCaseResolvedFromRequestAndReturnsContextualUrls() {
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "plano.pdf",
@@ -75,7 +75,7 @@ class CustomerRequestDocumentServiceTest {
                 "drawing".getBytes()
         );
 
-        when(jobCaseRepository.findByCustomerRequest_IdAndCustomerRequest_Customer_Id(31L, 20L))
+        when(jobCaseRepository.findByRequestAndCustomerForUpdate(31L, 20L))
                 .thenReturn(Optional.of(jobCase));
         when(jobCase.getId()).thenReturn(73L);
         when(documentService.create(
@@ -107,6 +107,7 @@ class CustomerRequestDocumentServiceTest {
                 "/api/v1/customers/20/requests/31/documents/7/versions/21/content?download=true",
                 result.currentVersion().downloadUrl()
         );
+        verify(jobCaseRepository).findByRequestAndCustomerForUpdate(31L, 20L);
         verify(traceabilityService).record(
                 eq(jobCase),
                 eq(TraceabilityAggregateType.DOCUMENT),
@@ -138,7 +139,7 @@ class CustomerRequestDocumentServiceTest {
                 " Revisión inicial "
         );
 
-        when(jobCaseRepository.findByCustomerRequest_IdAndCustomerRequest_Customer_Id(31L, 20L))
+        when(jobCaseRepository.findByRequestAndCustomerForUpdate(31L, 20L))
                 .thenReturn(Optional.of(jobCase));
         when(jobCase.getId()).thenReturn(73L);
         when(documentService.create(
@@ -165,7 +166,7 @@ class CustomerRequestDocumentServiceTest {
     }
 
     @Test
-    void forwardsCaseContextWhenAddingVersionAndBuildsUrls() {
+    void forwardsLockedCaseContextWhenAddingVersionAndBuildsUrls() {
         MockMultipartFile file = new MockMultipartFile(
                 "file",
                 "plano-v2.pdf",
@@ -173,7 +174,7 @@ class CustomerRequestDocumentServiceTest {
                 "revision".getBytes()
         );
 
-        when(jobCaseRepository.findByCustomerRequest_IdAndCustomerRequest_Customer_Id(31L, 20L))
+        when(jobCaseRepository.findByRequestAndCustomerForUpdate(31L, 20L))
                 .thenReturn(Optional.of(jobCase));
         when(jobCase.getId()).thenReturn(73L);
         stubVersionResponse();
@@ -192,6 +193,7 @@ class CustomerRequestDocumentServiceTest {
                 "/api/v1/customers/20/requests/31/documents/7/versions/21/content",
                 result.contentUrl()
         );
+        verify(jobCaseRepository).findByRequestAndCustomerForUpdate(31L, 20L);
         verify(traceabilityService).record(
                 eq(jobCase),
                 eq(TraceabilityAggregateType.DOCUMENT_VERSION),
@@ -211,14 +213,15 @@ class CustomerRequestDocumentServiceTest {
     }
 
     @Test
-    void removesDocumentOnlyAfterResolvingRequestContext() {
-        when(jobCaseRepository.findByCustomerRequest_IdAndCustomerRequest_Customer_Id(31L, 20L))
+    void removesDocumentOnlyAfterLockingRequestContext() {
+        when(jobCaseRepository.findByRequestAndCustomerForUpdate(31L, 20L))
                 .thenReturn(Optional.of(jobCase));
         when(jobCase.getId()).thenReturn(73L);
         when(documentService.remove(10L, 73L, 7L)).thenReturn("Plano de eje");
 
         service.remove(10L, 20L, 31L, 7L);
 
+        verify(jobCaseRepository).findByRequestAndCustomerForUpdate(31L, 20L);
         verify(documentService).remove(10L, 73L, 7L);
         verify(traceabilityService).record(
                 eq(jobCase),
@@ -237,7 +240,7 @@ class CustomerRequestDocumentServiceTest {
 
     @Test
     void rejectsRequestOutsideCustomerContextBeforeTouchingDocuments() {
-        when(jobCaseRepository.findByCustomerRequest_IdAndCustomerRequest_Customer_Id(31L, 20L))
+        when(jobCaseRepository.findByRequestAndCustomerForUpdate(31L, 20L))
                 .thenReturn(Optional.empty());
 
         BusinessException exception = assertThrows(

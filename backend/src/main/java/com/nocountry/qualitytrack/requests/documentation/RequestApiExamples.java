@@ -26,7 +26,7 @@ final class RequestApiExamples {
                   "id": 12,
                   "caseNumber": "CASE-00000001",
                   "status": "SUBMITTED",
-                  "assignedToUserId": null,
+                  "assignedToName": null,
                   "assignedAt": null,
                   "openedAt": "2026-09-10T10:00:00Z",
                   "cancelledByUserId": null,
@@ -56,13 +56,13 @@ final class RequestApiExamples {
                 "requestedByUserId": 42,
                 "requestedByName": "Ana López",
                 "createdAt": "2026-09-10T10:00:00Z",
-                "updatedAt": "2026-09-10T10:00:00Z",
+                "updatedAt": "2026-09-14T12:45:00Z",
                 "jobCase": {
                   "id": 12,
                   "caseNumber": "CASE-00000001",
-                  "status": "SUBMITTED",
-                  "assignedToUserId": null,
-                  "assignedAt": null,
+                  "status": "WAITING_CUSTOMER_INFO",
+                  "assignedToName": "Carlos Ruiz",
+                  "assignedAt": "2026-09-14T12:30:00Z",
                   "openedAt": "2026-09-10T10:00:00Z",
                   "cancelledByUserId": null,
                   "cancelledAt": null,
@@ -90,6 +90,18 @@ final class RequestApiExamples {
                       "contentUrl": "/api/v1/customers/20/requests/31/documents/7/versions/22/content",
                       "downloadUrl": "/api/v1/customers/20/requests/31/documents/7/versions/22/content?download=true"
                     }
+                  }
+                ],
+                "informationRequests": [
+                  {
+                    "id": 7,
+                    "question": "¿Puede confirmar si la tolerancia de ±0.02 mm aplica a todos los asientos?",
+                    "requestedByName": "Carlos Ruiz",
+                    "requestedAt": "2026-09-14T12:45:00Z",
+                    "response": null,
+                    "respondedByName": null,
+                    "respondedAt": null,
+                    "open": true
                   }
                 ]
               }
@@ -121,7 +133,7 @@ final class RequestApiExamples {
                     "id": 12,
                     "caseNumber": "CASE-00000001",
                     "status": "SUBMITTED",
-                    "assignedToUserId": null,
+                    "assignedToName": null,
                     "assignedAt": null,
                     "openedAt": "2026-09-10T10:00:00Z",
                     "cancelledByUserId": null,
@@ -152,12 +164,12 @@ final class RequestApiExamples {
                 "requestedByUserId": 42,
                 "requestedByName": "Ana López",
                 "createdAt": "2026-09-10T10:00:00Z",
-                "updatedAt": "2026-09-10T10:00:00Z",
+                "updatedAt": "2026-09-10T14:45:00Z",
                 "jobCase": {
                   "id": 12,
                   "caseNumber": "CASE-00000001",
                   "status": "CANCELLED",
-                  "assignedToUserId": null,
+                  "assignedToName": null,
                   "assignedAt": null,
                   "openedAt": "2026-09-10T10:00:00Z",
                   "cancelledByUserId": 42,
@@ -176,10 +188,10 @@ final class RequestApiExamples {
               "data": {
                 "id": 12,
                 "caseNumber": "CASE-00000001",
-                "status": "SUBMITTED",
-                "assignedToUserId": null,
-                "assignedToName": null,
-                "assignedAt": null,
+                "status": "UNDER_REVIEW",
+                "assignedToUserId": 10,
+                "assignedToName": "Carlos Ruiz",
+                "assignedAt": "2026-09-14T12:30:00Z",
                 "openedAt": "2026-09-10T10:00:00Z",
                 "closedAt": null,
                 "cancelledByUserId": null,
@@ -225,7 +237,30 @@ final class RequestApiExamples {
                       "downloadUrl": "/api/v1/customers/20/requests/31/documents/7/versions/22/content?download=true"
                     }
                   }
-                ]
+                ],
+                "informationRequests": [
+                  {
+                    "id": 7,
+                    "question": "¿Puede confirmar si la tolerancia de ±0.02 mm aplica a todos los asientos?",
+                    "requestedByUserId": 10,
+                    "requestedByName": "Carlos Ruiz",
+                    "requestedAt": "2026-09-14T12:45:00Z",
+                    "response": "Aplica únicamente a los asientos indicados en el plano.",
+                    "respondedByUserId": 42,
+                    "respondedByName": "Ana López",
+                    "respondedAt": "2026-09-14T13:20:00Z",
+                    "open": false
+                  }
+                ],
+                "materialSpecification": {
+                  "id": 5,
+                  "materialName": "Acero AISI 4140",
+                  "standardOrGrade": "ASTM A29",
+                  "technicalNotes": "Especificación técnica confirmada por Ingeniería.",
+                  "definedByUserId": 18,
+                  "definedByName": "Laura Méndez",
+                  "definedAt": "2026-09-14T13:40:00Z"
+                }
               }
             }
             """;

@@ -19,11 +19,15 @@ public record JobCaseDetailResponse(
         Instant cancelledAt,
         String cancellationReason,
         JobCaseResponse.RequestSummary request,
-        List<RequestDocumentResponse> documents
+        List<RequestDocumentResponse> documents,
+        List<CaseInformationRequestResponse> informationRequests,
+        CaseMaterialSpecificationResponse materialSpecification
 ) {
     public static JobCaseDetailResponse from(
             JobCaseResponse jobCase,
-            List<RequestDocumentResponse> documents
+            List<RequestDocumentResponse> documents,
+            List<CaseInformationRequestResponse> informationRequests,
+            CaseMaterialSpecificationResponse materialSpecification
     ) {
         return new JobCaseDetailResponse(
                 jobCase.id(),
@@ -39,7 +43,9 @@ public record JobCaseDetailResponse(
                 jobCase.cancelledAt(),
                 jobCase.cancellationReason(),
                 jobCase.request(),
-                documents
+                documents,
+                informationRequests,
+                materialSpecification
         );
     }
 }

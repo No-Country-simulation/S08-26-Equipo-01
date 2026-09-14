@@ -22,11 +22,13 @@ public record CustomerRequestDetailResponse(
         Instant createdAt,
         Instant updatedAt,
         JobCaseSummaryResponse jobCase,
-        List<RequestDocumentResponse> documents
+        List<RequestDocumentResponse> documents,
+        List<CustomerInformationRequestResponse> informationRequests
 ) {
     public static CustomerRequestDetailResponse from(
             CustomerRequestResponse request,
-            List<RequestDocumentResponse> documents
+            List<RequestDocumentResponse> documents,
+            List<CustomerInformationRequestResponse> informationRequests
     ) {
         return new CustomerRequestDetailResponse(
                 request.id(),
@@ -44,7 +46,8 @@ public record CustomerRequestDetailResponse(
                 request.createdAt(),
                 request.updatedAt(),
                 request.jobCase(),
-                documents
+                documents,
+                informationRequests
         );
     }
 }

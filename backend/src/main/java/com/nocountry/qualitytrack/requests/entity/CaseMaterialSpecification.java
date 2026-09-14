@@ -16,6 +16,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.Objects;
 
 @Entity
 @Table(name = "case_material_specifications")
@@ -56,11 +57,7 @@ public class CaseMaterialSpecification {
             Instant definedAt
     ) {
         this.jobCase = jobCase;
-        this.materialName = materialName;
-        this.standardOrGrade = standardOrGrade;
-        this.technicalNotes = technicalNotes;
-        this.definedByUser = definedByUser;
-        this.definedAt = definedAt;
+        redefine(materialName, standardOrGrade, technicalNotes, definedByUser, definedAt);
     }
 
     public static CaseMaterialSpecification define(
@@ -72,12 +69,42 @@ public class CaseMaterialSpecification {
             Instant definedAt
     ) {
         return new CaseMaterialSpecification(
-                jobCase,
+                Objects.requireNonNull(jobCase),
                 materialName,
                 standardOrGrade,
                 technicalNotes,
                 definedByUser,
                 definedAt
         );
+    }
+
+    public void redefine(
+            String materialName,
+            String standardOrGrade,
+            String technicalNotes,
+            User definedByUser,
+            Instant definedAt
+    ) {
+        this.materialName = requireText(materialName, "El material es obligatorio.");
+        this.standardOrGrade = normalizeNullable(standardOrGrade);
+        this.technicalNotes = normalizeNullable(technicalNotes);
+        this.definedByUser = Objects.requireNonNull(definedByUser);
+        this.definedAt = Objects.requireNonNull(definedAt);
+    }
+
+    private String requireText(String value, String message) {
+        String normalized = normalizeNullable(value);
+        if (normalized == null) {
+            throw new IllegalArgumentException(message);
+        }
+        return normalized;
+    }
+
+    private String normalizeNullable(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim();
+        return normalized.isEmpty() ? null : normalized;
     }
 }

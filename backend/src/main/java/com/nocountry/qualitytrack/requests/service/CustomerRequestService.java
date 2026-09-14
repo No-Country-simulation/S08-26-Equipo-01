@@ -7,12 +7,14 @@ import com.nocountry.qualitytrack.customers.enums.CustomerStatus;
 import com.nocountry.qualitytrack.customers.repository.CustomerMembershipRepository;
 import com.nocountry.qualitytrack.requests.dto.request.CancelCustomerRequest;
 import com.nocountry.qualitytrack.requests.dto.request.SubmitCustomerRequest;
+import com.nocountry.qualitytrack.requests.dto.response.CustomerInformationRequestResponse;
 import com.nocountry.qualitytrack.requests.dto.response.CustomerRequestDetailResponse;
 import com.nocountry.qualitytrack.requests.dto.response.CustomerRequestResponse;
 import com.nocountry.qualitytrack.requests.dto.response.RequestDocumentResponse;
 import com.nocountry.qualitytrack.requests.entity.CustomerRequest;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.requests.enums.JobCaseStatus;
+import com.nocountry.qualitytrack.requests.repository.CaseInformationRequestRepository;
 import com.nocountry.qualitytrack.requests.repository.CustomerRequestRepository;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
@@ -35,6 +37,7 @@ public class CustomerRequestService {
 
     private final CustomerRequestRepository customerRequestRepository;
     private final JobCaseRepository jobCaseRepository;
+    private final CaseInformationRequestRepository informationRequestRepository;
     private final CustomerMembershipRepository membershipRepository;
     private final RequestReferenceGenerator referenceGenerator;
     private final CustomerRequestDocumentService customerRequestDocumentService;
@@ -143,8 +146,13 @@ public class CustomerRequestService {
         );
         List<RequestDocumentResponse> documents = customerRequestDocumentService
                 .listCurrent(currentUserId, jobCase);
+        List<CustomerInformationRequestResponse> informationRequests = informationRequestRepository
+                .findAllByJobCase_IdOrderByRequestedAtAsc(jobCase.getId())
+                .stream()
+                .map(CustomerInformationRequestResponse::from)
+                .toList();
 
-        return CustomerRequestDetailResponse.from(request, documents);
+        return CustomerRequestDetailResponse.from(request, documents, informationRequests);
     }
 
     @Transactional

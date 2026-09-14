@@ -38,8 +38,22 @@ public interface JobCaseRepository extends JpaRepository<JobCase, Long> {
     @Query("""
             select jobCase
             from JobCase jobCase
-            where jobCase.customerRequest.id = :requestId
-              and jobCase.customerRequest.customer.id = :customerId
+            join fetch jobCase.customerRequest request
+            join fetch request.customer customer
+            left join fetch jobCase.assignedToUser
+            where jobCase.id = :caseId
+            """)
+    Optional<JobCase> findByIdForUpdate(@Param("caseId") Long caseId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            select jobCase
+            from JobCase jobCase
+            join fetch jobCase.customerRequest request
+            join fetch request.customer customer
+            left join fetch jobCase.assignedToUser
+            where request.id = :requestId
+              and customer.id = :customerId
             """)
     Optional<JobCase> findByRequestAndCustomerForUpdate(
             @Param("requestId") Long requestId,

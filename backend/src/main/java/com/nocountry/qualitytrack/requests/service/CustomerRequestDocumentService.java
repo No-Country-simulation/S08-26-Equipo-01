@@ -44,7 +44,7 @@ public class CustomerRequestDocumentService {
             CreateRequestDocument metadata,
             MultipartFile file
     ) {
-        JobCase jobCase = requireJobCase(customerId, requestId);
+        JobCase jobCase = requireJobCaseForUpdate(customerId, requestId);
         DocumentResponse document = documentService.create(
                 currentUserId,
                 new CreateDocumentRequest(
@@ -97,7 +97,7 @@ public class CustomerRequestDocumentService {
             Long documentId,
             MultipartFile file
     ) {
-        JobCase jobCase = requireJobCase(customerId, requestId);
+        JobCase jobCase = requireJobCaseForUpdate(customerId, requestId);
         DocumentVersionMutationResult result = documentService.addVersion(
                 currentUserId,
                 jobCase.getId(),
@@ -178,7 +178,7 @@ public class CustomerRequestDocumentService {
             Long requestId,
             Long documentId
     ) {
-        JobCase jobCase = requireJobCase(customerId, requestId);
+        JobCase jobCase = requireJobCaseForUpdate(customerId, requestId);
         String documentName = documentService.remove(currentUserId, jobCase.getId(), documentId);
 
         traceabilityService.record(
@@ -199,10 +199,20 @@ public class CustomerRequestDocumentService {
     private JobCase requireJobCase(Long customerId, Long requestId) {
         return jobCaseRepository
                 .findByCustomerRequest_IdAndCustomerRequest_Customer_Id(requestId, customerId)
-                .orElseThrow(() -> new BusinessException(
-                        ApiErrorCode.RESOURCE_NOT_FOUND,
-                        "No se encontró la solicitud."
-                ));
+                .orElseThrow(() -> notFound());
+    }
+
+    private JobCase requireJobCaseForUpdate(Long customerId, Long requestId) {
+        return jobCaseRepository
+                .findByRequestAndCustomerForUpdate(requestId, customerId)
+                .orElseThrow(() -> notFound());
+    }
+
+    private BusinessException notFound() {
+        return new BusinessException(
+                ApiErrorCode.RESOURCE_NOT_FOUND,
+                "No se encontró la solicitud."
+        );
     }
 
     private String documentType(CreateRequestDocument metadata) {

@@ -1,5 +1,6 @@
 package com.nocountry.qualitytrack.requests.entity;
 
+import com.nocountry.qualitytrack.requests.enums.JobCaseStatus;
 import com.nocountry.qualitytrack.users.entity.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,6 +16,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.Objects;
 
 @Entity
 @Table(name = "case_information_requests")
@@ -55,10 +57,10 @@ public class CaseInformationRequest {
             User requestedByUser,
             Instant requestedAt
     ) {
-        this.jobCase = jobCase;
-        this.question = question;
-        this.requestedByUser = requestedByUser;
-        this.requestedAt = requestedAt;
+        this.jobCase = Objects.requireNonNull(jobCase);
+        this.question = requireText(question, "La pregunta es obligatoria.");
+        this.requestedByUser = Objects.requireNonNull(requestedByUser);
+        this.requestedAt = Objects.requireNonNull(requestedAt);
     }
 
     public static CaseInformationRequest open(
@@ -70,13 +72,26 @@ public class CaseInformationRequest {
         return new CaseInformationRequest(jobCase, question, requestedByUser, requestedAt);
     }
 
+    public boolean isOpen() {
+        return respondedAt == null
+                && jobCase != null
+                && jobCase.getStatus() == JobCaseStatus.WAITING_CUSTOMER_INFO;
+    }
+
     public void respond(String response, User respondedByUser, Instant respondedAt) {
-        if (this.respondedAt != null) {
-            throw new IllegalStateException("La solicitud de información ya fue respondida.");
+        if (!isOpen()) {
+            throw new IllegalStateException("La solicitud de información ya no está abierta.");
         }
 
-        this.response = response;
-        this.respondedByUser = respondedByUser;
-        this.respondedAt = respondedAt;
+        this.response = requireText(response, "La respuesta es obligatoria.");
+        this.respondedByUser = Objects.requireNonNull(respondedByUser);
+        this.respondedAt = Objects.requireNonNull(respondedAt);
+    }
+
+    private String requireText(String value, String message) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new IllegalArgumentException(message);
+        }
+        return value.trim();
     }
 }

@@ -1,9 +1,13 @@
 package com.nocountry.qualitytrack.requests.service;
 
+import com.nocountry.qualitytrack.requests.dto.response.CaseInformationRequestResponse;
+import com.nocountry.qualitytrack.requests.dto.response.CaseMaterialSpecificationResponse;
 import com.nocountry.qualitytrack.requests.dto.response.JobCaseDetailResponse;
 import com.nocountry.qualitytrack.requests.dto.response.JobCaseResponse;
 import com.nocountry.qualitytrack.requests.dto.response.RequestDocumentResponse;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
+import com.nocountry.qualitytrack.requests.repository.CaseInformationRequestRepository;
+import com.nocountry.qualitytrack.requests.repository.CaseMaterialSpecificationRepository;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
@@ -29,6 +33,8 @@ public class JobCaseService {
     private final UserRepository userRepository;
     private final UserSystemRoleRepository userSystemRoleRepository;
     private final CustomerRequestDocumentService customerRequestDocumentService;
+    private final CaseInformationRequestRepository informationRequestRepository;
+    private final CaseMaterialSpecificationRepository materialSpecificationRepository;
     private final TraceabilityService traceabilityService;
 
     @Transactional(readOnly = true)
@@ -53,8 +59,22 @@ public class JobCaseService {
 
         List<RequestDocumentResponse> documents = customerRequestDocumentService
                 .listCurrent(currentUserId, jobCase);
+        List<CaseInformationRequestResponse> informationRequests = informationRequestRepository
+                .findAllByJobCase_IdOrderByRequestedAtAsc(caseId)
+                .stream()
+                .map(CaseInformationRequestResponse::from)
+                .toList();
+        CaseMaterialSpecificationResponse materialSpecification = materialSpecificationRepository
+                .findByJobCase_Id(caseId)
+                .map(CaseMaterialSpecificationResponse::from)
+                .orElse(null);
 
-        return JobCaseDetailResponse.from(JobCaseResponse.from(jobCase), documents);
+        return JobCaseDetailResponse.from(
+                JobCaseResponse.from(jobCase),
+                documents,
+                informationRequests,
+                materialSpecification
+        );
     }
 
     @Transactional(readOnly = true)

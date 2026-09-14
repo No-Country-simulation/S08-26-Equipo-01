@@ -18,13 +18,13 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Operation(
-        summary = "Consultar detalle de solicitud de cliente",
-        description = "Consulta una solicitud específica dentro de una empresa. La respuesta incluye el JobCase asociado y los documentos ACTIVE visibles para el usuario. De cada documento se devuelve únicamente su versión actual, con URLs para vista previa y descarga. El historial completo se consulta bajo el endpoint de versiones del documento."
+        summary = "Consultar detalle de una solicitud de cliente",
+        description = "Devuelve una CustomerRequest visible para la empresa junto con el resumen de su JobCase, los documentos activos y las aclaraciones asociadas. Esta vista permite al cliente seguir el estado de su solicitud, conocer quién está atendiendo la revisión cuando exista un responsable y detectar preguntas pendientes del equipo interno. De cada documento se incluye su versión actual y las aclaraciones contienen la información necesaria para responderlas. La consulta es de solo lectura y no modifica estados ni asignaciones."
 )
 @ApiResponses({
         @ApiResponse(
                 responseCode = "200",
-                description = "Solicitud consultada correctamente",
+                description = "Solicitud consultada correctamente con expediente, documentos y aclaraciones asociadas",
                 content = @Content(
                         mediaType = "application/json",
                         schema = @Schema(implementation = com.nocountry.qualitytrack.shared.response.ApiResponse.class),
@@ -33,12 +33,12 @@ import java.lang.annotation.Target;
         ),
         @ApiResponse(
                 responseCode = "401",
-                description = "Autenticación requerida",
+                description = "La petición no contiene una autenticación válida",
                 content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class), examples = @ExampleObject(value = RequestApiExamples.AUTHENTICATION_REQUIRED))
         ),
         @ApiResponse(
                 responseCode = "403",
-                description = "El usuario no tiene una membresía activa en la empresa o no puede consultar sus documentos",
+                description = "El usuario no posee una membresía ACTIVE en la empresa o no puede consultar sus documentos",
                 content = @Content(mediaType = "application/problem+json", schema = @Schema(implementation = ProblemDetail.class), examples = @ExampleObject(value = RequestApiExamples.ACCESS_DENIED))
         ),
         @ApiResponse(

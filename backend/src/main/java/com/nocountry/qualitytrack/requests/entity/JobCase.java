@@ -86,6 +86,43 @@ public class JobCase {
         return new JobCase(customerRequest, caseNumber, openedAt);
     }
 
+    public void takeForReview(User user, Instant assignedAt) {
+        if (status != JobCaseStatus.SUBMITTED) {
+            throw new IllegalStateException("Solo se puede tomar un expediente en estado SUBMITTED.");
+        }
+        if (assignedToUser != null) {
+            throw new IllegalStateException("El expediente ya tiene un responsable asignado.");
+        }
+
+        this.assignedToUser = Objects.requireNonNull(user);
+        this.assignedAt = Objects.requireNonNull(assignedAt);
+        this.status = JobCaseStatus.UNDER_REVIEW;
+    }
+
+    public void waitForCustomerInfo() {
+        if (status != JobCaseStatus.UNDER_REVIEW) {
+            throw new IllegalStateException("Solo se puede solicitar información durante la revisión.");
+        }
+
+        this.status = JobCaseStatus.WAITING_CUSTOMER_INFO;
+    }
+
+    public void resumeReview() {
+        if (status != JobCaseStatus.WAITING_CUSTOMER_INFO) {
+            throw new IllegalStateException("Solo se puede reanudar revisión cuando se espera información del cliente.");
+        }
+
+        this.status = JobCaseStatus.UNDER_REVIEW;
+    }
+
+    public void markReadyForQuotation() {
+        if (status != JobCaseStatus.UNDER_REVIEW) {
+            throw new IllegalStateException("Solo se puede completar revisión desde UNDER_REVIEW.");
+        }
+
+        this.status = JobCaseStatus.READY_FOR_QUOTATION;
+    }
+
     public boolean canBeCancelled() {
         return status == JobCaseStatus.SUBMITTED
                 || status == JobCaseStatus.UNDER_REVIEW

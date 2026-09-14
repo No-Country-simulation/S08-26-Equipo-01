@@ -8,6 +8,7 @@ import com.nocountry.qualitytrack.requests.dto.response.RequestDocumentResponse;
 import com.nocountry.qualitytrack.requests.service.CustomerRequestDocumentService;
 import com.nocountry.qualitytrack.requests.service.CustomerRequestService;
 import com.nocountry.qualitytrack.requests.service.CustomerRequestSubmissionService;
+import com.nocountry.qualitytrack.requests.service.JobCaseWorkflowService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -42,6 +43,7 @@ class CustomerRequestControllerMultipartTest {
     @Mock CustomerRequestService customerRequestService;
     @Mock CustomerRequestSubmissionService customerRequestSubmissionService;
     @Mock CustomerRequestDocumentService customerRequestDocumentService;
+    @Mock JobCaseWorkflowService jobCaseWorkflowService;
 
     private MockMvc mockMvc;
 
@@ -50,7 +52,8 @@ class CustomerRequestControllerMultipartTest {
         mockMvc = MockMvcBuilders.standaloneSetup(new CustomerRequestController(
                         customerRequestService,
                         customerRequestSubmissionService,
-                        customerRequestDocumentService
+                        customerRequestDocumentService,
+                        jobCaseWorkflowService
                 ))
                 .setCustomArgumentResolvers(new CurrentUserIdResolver())
                 .build();

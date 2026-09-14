@@ -13,6 +13,7 @@ import com.nocountry.qualitytrack.requests.entity.CustomerRequest;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.requests.enums.JobCaseStatus;
 import com.nocountry.qualitytrack.requests.enums.MaterialRequirementType;
+import com.nocountry.qualitytrack.requests.repository.CaseInformationRequestRepository;
 import com.nocountry.qualitytrack.requests.repository.CustomerRequestRepository;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
@@ -52,6 +53,9 @@ class CustomerRequestServiceTest {
     private JobCaseRepository jobCaseRepository;
 
     @Mock
+    private CaseInformationRequestRepository informationRequestRepository;
+
+    @Mock
     private CustomerMembershipRepository membershipRepository;
 
     @Mock
@@ -79,6 +83,7 @@ class CustomerRequestServiceTest {
         service = new CustomerRequestService(
                 customerRequestRepository,
                 jobCaseRepository,
+                informationRequestRepository,
                 membershipRepository,
                 referenceGenerator,
                 customerRequestDocumentService,
