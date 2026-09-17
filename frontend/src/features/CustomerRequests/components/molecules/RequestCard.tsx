@@ -7,12 +7,7 @@ export const RequestCard = ({ request, onSelect }: RequestCardProps) => {
     <article className="card bg-base-100 shadow-xl">
       <div className="card-body gap-4">
         <div className="flex items-start justify-between gap-2">
-          <div>
-            <h2 className="card-title">{request.requestNumber}</h2>
-            <p className="text-sm text-base-content/70">
-              {formatDate(request.createdAt)}
-            </p>
-          </div>
+          <h2 className="card-title">{request.requestNumber}</h2>
           <StatusBadge status={request.status} />
         </div>
         <p className="line-clamp-2 text-sm">{request.description}</p>

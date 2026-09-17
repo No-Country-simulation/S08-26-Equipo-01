@@ -2,6 +2,7 @@ import type {
   CreateCustomerRequestInput,
   CustomerRequest,
   CustomerRequestStatus,
+  CustomerRequestSummary,
 } from './index'
 
 export interface StatusBadgeProps {
@@ -9,12 +10,12 @@ export interface StatusBadgeProps {
 }
 
 export interface RequestCardProps {
-  request: CustomerRequest
+  request: CustomerRequestSummary
   onSelect: (id: string) => void
 }
 
 export interface RequestListProps {
-  requests: CustomerRequest[]
+  requests: CustomerRequestSummary[]
   onSelect: (id: string) => void
 }
 
@@ -26,12 +27,11 @@ export interface RequestFormProps {
 }
 
 export interface RequestListTemplateProps {
-  requests: CustomerRequest[]
+  requests: CustomerRequestSummary[]
   isLoading: boolean
   isError: boolean
   error: string | null
   onRetry: () => void
-  onCreateRequest: () => void
   onSelectRequest: (id: string) => void
 }
 
@@ -42,11 +42,14 @@ export interface CreateRequestTemplateProps {
   onCancel: () => void
 }
 
-export interface RequestDetailTemplateProps {
+export interface RequestDetailModalProps {
   request: CustomerRequest | null
   isLoading: boolean
   isError: boolean
   error: string | null
   onRetry: () => void
-  onBack: () => void
+  onClose: () => void
+  onCancelRequest: () => void
+  isCancelling: boolean
+  cancelError: string | null
 }

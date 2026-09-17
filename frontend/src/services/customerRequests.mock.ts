@@ -1,10 +1,16 @@
 import { CURRENT_CONTACT } from '@/features/CustomerRequests/constants'
+import {
+  CANCELLATION_NOT_ALLOWED_MESSAGE,
+  REQUEST_NOT_FOUND_MESSAGE,
+} from '@/features/CustomerRequests/constants'
+import { buildCreatedRequest } from '@/features/CustomerRequests/helpers/buildCreatedRequest'
+import { delay } from '@/features/CustomerRequests/helpers/delay'
+import { toSummary } from '@/features/CustomerRequests/helpers/toSummary'
 import type {
   CreateCustomerRequestInput,
   CustomerRequest,
+  CustomerRequestSummary,
 } from '@/features/CustomerRequests/types'
-
-const delay = (ms = 500) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const seedRequests: CustomerRequest[] = [
   {
@@ -47,41 +53,16 @@ const seedRequests: CustomerRequest[] = [
 
 let requests: CustomerRequest[] = [...seedRequests]
 
-const nextRequestNumber = (): string => {
-  const max = requests.reduce((acc, request) => {
-    const current = Number(request.requestNumber.replace('REQ-', ''))
-    return Number.isNaN(current) ? acc : Math.max(acc, current)
-  }, 0)
-  return `REQ-${String(max + 1).padStart(3, '0')}`
-}
-
-const buildCreatedRequest = (
-  input: CreateCustomerRequestInput,
-): CustomerRequest => {
-  const now = new Date().toISOString()
-  return {
-    id: crypto.randomUUID(),
-    contactId: CURRENT_CONTACT.id,
-    requestNumber: nextRequestNumber(),
-    description: input.description,
-    quantity: input.quantity,
-    requestDeliveryDate: input.requestDeliveryDate,
-    status: 'RECEIVED',
-    receivedAt: now,
-    createdAt: now,
-  }
-}
-
 export const mockApi = {
-  list: async (): Promise<CustomerRequest[]> => {
+  list: async (): Promise<CustomerRequestSummary[]> => {
     await delay()
-    return [...requests]
+    return requests.map(toSummary)
   },
   getById: async (id: string): Promise<CustomerRequest> => {
     await delay()
     const request = requests.find((item) => item.id === id)
     if (!request) {
-      throw new Error('Solicitud no encontrada')
+      throw new Error(REQUEST_NOT_FOUND_MESSAGE)
     }
     return request
   },
@@ -89,8 +70,24 @@ export const mockApi = {
     input: CreateCustomerRequestInput,
   ): Promise<CustomerRequest> => {
     await delay()
-    const created = buildCreatedRequest(input)
+    const created = buildCreatedRequest(input, requests)
     requests = [created, ...requests]
     return created
+  },
+  cancel: async (id: string): Promise<CustomerRequest> => {
+    await delay()
+    const request = requests.find((item) => item.id === id)
+    if (!request) {
+      throw new Error(REQUEST_NOT_FOUND_MESSAGE)
+    }
+    if (request.status !== 'RECEIVED') {
+      throw new Error(CANCELLATION_NOT_ALLOWED_MESSAGE)
+    }
+    const cancelled: CustomerRequest = {
+      ...request,
+      status: 'CANCELLED',
+    }
+    requests = requests.map((item) => (item.id === id ? cancelled : item))
+    return cancelled
   },
 }
