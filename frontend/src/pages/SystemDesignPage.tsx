@@ -1,8 +1,8 @@
-import SystemDesignTemplate from '@/features/SystemDesign/components/templates/SystemDesignTemplate'
+import { SystemDesignTemplate } from '@/features/SystemDesign/components/templates/SystemDesignTemplate'
 import { useSystemDesign } from '@/hooks/useSystemDesign'
 import { getErrorMessage } from '@/shared/utils/errorMessage'
 
-export default function SystemDesignPage() {
+export const SystemDesignPage = () => {
   const { users, isLoading, isError, error, retry } = useSystemDesign()
 
   return (

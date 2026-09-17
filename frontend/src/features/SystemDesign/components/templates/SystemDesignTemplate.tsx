@@ -1,8 +1,8 @@
-import ErrorAlert from '@/shared/components/ErrorAlert'
-import Spinner from '@/shared/components/Spinner'
+import { ErrorAlert } from '@/shared/components/ErrorAlert'
+import { Spinner } from '@/shared/components/Spinner'
 import { EMPTY_STATE_MESSAGE, SUBTITLE, TITLE } from '../../constants'
 import type { User } from '../../types'
-import UserGrid from '../organisms/UserGrid'
+import { UserGrid } from '../organisms/UserGrid'
 
 type SystemDesignTemplateProps = {
   users: User[]
@@ -12,13 +12,13 @@ type SystemDesignTemplateProps = {
   onRetry: () => void
 }
 
-export default function SystemDesignTemplate({
+export const SystemDesignTemplate = ({
   users,
   isLoading,
   isError,
   error,
   onRetry,
-}: SystemDesignTemplateProps) {
+}: SystemDesignTemplateProps) => {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-6xl flex-col gap-8 p-8">
       <header className="flex flex-col gap-2">
