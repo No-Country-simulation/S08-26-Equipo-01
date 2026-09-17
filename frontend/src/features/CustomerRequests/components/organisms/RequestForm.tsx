@@ -27,29 +27,11 @@ export const RequestForm = ({
 
   return (
     <form
-      className="card max-w-2xl bg-base-100 shadow-xl"
+      className="card w-full bg-base-100 shadow-xl"
       onSubmit={handleSubmit(onSubmit)}
       noValidate
     >
       <div className="card-body gap-4">
-        <div className="form-control">
-          <label className="label" htmlFor="description">
-            <span className="label-text">Descripción del producto</span>
-          </label>
-          <textarea
-            id="description"
-            className={`textarea textarea-bordered ${errors.description ? 'textarea-error' : ''}`}
-            placeholder="Ej.: piezas de mecanizado, material, plano o especificación"
-            rows={4}
-            {...register('description')}
-          />
-          {errors.description && (
-            <span className="label-text-alt mt-1 text-error">
-              {errors.description.message}
-            </span>
-          )}
-        </div>
-
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="form-control">
             <label className="label" htmlFor="quantity">
@@ -86,6 +68,24 @@ export const RequestForm = ({
               </span>
             )}
           </div>
+        </div>
+
+        <div className="form-control">
+          <label className="label" htmlFor="description">
+            <span className="label-text">Descripción del producto</span>
+          </label>
+          <textarea
+            id="description"
+            className={`textarea textarea-bordered w-full ${errors.description ? 'textarea-error' : ''}`}
+            placeholder="Ej.: piezas de mecanizado, material, plano o especificación"
+            rows={4}
+            {...register('description')}
+          />
+          {errors.description && (
+            <span className="label-text-alt mt-1 text-error">
+              {errors.description.message}
+            </span>
+          )}
         </div>
 
         {submitError && (

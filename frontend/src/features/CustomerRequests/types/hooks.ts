@@ -1,7 +1,7 @@
-import type { CustomerRequest } from './index'
+import type { CustomerRequest, CustomerRequestSummary } from './index'
 
 export interface UseCustomerRequestsResult {
-  requests: CustomerRequest[]
+  requests: CustomerRequestSummary[]
   isLoading: boolean
   isError: boolean
   error: Error | null

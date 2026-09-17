@@ -10,7 +10,7 @@ export const CreateRequestPage = () => {
 
   const handleSubmit = (input: CreateCustomerRequestInput) => {
     mutation.mutate(input, {
-      onSuccess: (request) => navigate(`/requests/${request.id}`),
+      onSuccess: () => navigate('/dashboard'),
     })
   }
 

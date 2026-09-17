@@ -4,6 +4,7 @@ export type CustomerRequestStatus =
   | 'FEASIBLE'
   | 'REJECTED'
   | 'QUOTED'
+  | 'CANCELLED'
 
 export interface CustomerContact {
   id: string
@@ -14,14 +15,17 @@ export interface CustomerContact {
   phone: string
 }
 
-export interface CustomerRequest {
+export interface CustomerRequestSummary {
   id: string
-  contactId: string
   requestNumber: string
   description: string
   quantity: number
   requestDeliveryDate: string
   status: CustomerRequestStatus
+}
+
+export interface CustomerRequest extends CustomerRequestSummary {
+  contactId: string
   receivedAt: string
   createdAt: string
 }
