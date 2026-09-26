@@ -9,10 +9,13 @@ import com.nocountry.qualitytrack.documents.enums.DocumentStatus;
 import com.nocountry.qualitytrack.documents.repository.DocumentRepository;
 import com.nocountry.qualitytrack.documents.repository.DocumentVersionRepository;
 import com.nocountry.qualitytrack.documents.storage.DocumentStorage;
+import com.nocountry.qualitytrack.documents.storage.DocumentStorageException;
 import com.nocountry.qualitytrack.documents.storage.StoredDocumentFile;
 import com.nocountry.qualitytrack.requests.entity.CustomerRequest;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
+import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
+import com.nocountry.qualitytrack.shared.exception.BusinessException;
 import com.nocountry.qualitytrack.users.entity.User;
 import com.nocountry.qualitytrack.users.enums.AccountType;
 import org.junit.jupiter.api.BeforeEach;
@@ -122,6 +125,44 @@ class DocumentServiceTest {
         assertEquals("Plano de eje", response.name());
         assertEquals(1, response.currentVersion().version());
         assertEquals("plano.pdf", response.currentVersion().fileName());
+    }
+
+    @Test
+    void mapsStorageFailureAndPreservesOriginalCause() {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "plano.pdf",
+                "application/pdf",
+                "contenido".getBytes()
+        );
+        DocumentStorageException storageFailure = new DocumentStorageException(
+                "Cloudinary rejected the upload"
+        );
+
+        stubCaseCustomer();
+        when(jobCaseRepository.findById(12L)).thenReturn(Optional.of(jobCase));
+        when(accessService.requireCanCreate(10L, jobCase)).thenReturn(user);
+        when(documentRepository.saveAndFlush(any(Document.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(storage.store(
+                eq(20L),
+                eq(12L),
+                eq(1),
+                eq("plano.pdf"),
+                any(InputStream.class)
+        )).thenThrow(storageFailure);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.create(
+                        10L,
+                        new CreateDocumentRequest(12L, "DRAWING", "Plano", null),
+                        file
+                )
+        );
+
+        assertEquals(ApiErrorCode.DOCUMENT_STORAGE_ERROR, exception.getCode());
+        assertSame(storageFailure, exception.getCause());
     }
 
     @Test

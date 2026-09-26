@@ -35,6 +35,6 @@ class QualityTrackApplicationTests {
     @Test
     void contextLoadsAndFlywayAppliesLatestMigration() {
         assertNotNull(flyway.info().current());
-        assertEquals("11", flyway.info().current().getVersion().getVersion());
+        assertEquals("14", flyway.info().current().getVersion().getVersion());
     }
 }

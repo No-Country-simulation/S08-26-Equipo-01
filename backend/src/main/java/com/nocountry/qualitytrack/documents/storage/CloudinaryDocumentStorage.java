@@ -8,7 +8,6 @@ import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Component;
 
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.MalformedURLException;
@@ -40,7 +39,16 @@ public class CloudinaryDocumentStorage implements DocumentStorage {
             );
         }
 
-        this.cloudinary = new Cloudinary(cloudinaryUrl.trim());
+        String normalizedCloudinaryUrl = cloudinaryUrl.trim();
+
+        try {
+            this.cloudinary = new Cloudinary(normalizedCloudinaryUrl);
+        } catch (RuntimeException exception) {
+            throw new IllegalStateException(
+                    "CLOUDINARY_URL no tiene una configuración válida.",
+                    exception
+            );
+        }
     }
 
     @Override
@@ -58,7 +66,7 @@ public class CloudinaryDocumentStorage implements DocumentStorage {
             String publicId = buildPublicId(version, fileName);
 
             Map<?, ?> result = cloudinary.uploader().upload(
-                    new ByteArrayInputStream(content),
+                    content,
                     ObjectUtils.asMap(
                             "resource_type", RESOURCE_TYPE,
                             "type", DELIVERY_TYPE,

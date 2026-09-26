@@ -18,6 +18,8 @@ import com.nocountry.qualitytrack.shared.exception.BusinessException;
 import com.nocountry.qualitytrack.users.entity.User;
 import com.nocountry.qualitytrack.users.enums.AccountType;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +40,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class DocumentService {
 
+    private static final Logger LOGGER = LoggerFactory.getLogger(DocumentService.class);
     private static final String DEFAULT_MIME_TYPE = "application/octet-stream";
 
     private final DocumentRepository documentRepository;
@@ -217,7 +220,15 @@ public class DocumentService {
                     fileSize
             );
         } catch (IOException | DocumentStorageException exception) {
-            throw storageUnavailable();
+            LOGGER.error(
+                    "Document storage read failed. provider={}, caseId={}, documentId={}, versionId={}",
+                    storage.getClass().getSimpleName(),
+                    caseId,
+                    documentId,
+                    versionId,
+                    exception
+            );
+            throw storageUnavailable(exception);
         }
     }
 
@@ -289,7 +300,15 @@ public class DocumentService {
                     inputStream
             );
         } catch (IOException | DocumentStorageException exception) {
-            throw storageUnavailable();
+            LOGGER.error(
+                    "Document storage write failed. provider={}, customerId={}, caseId={}, version={}",
+                    storage.getClass().getSimpleName(),
+                    customerId,
+                    jobCase.getId(),
+                    version,
+                    exception
+            );
+            throw storageUnavailable(exception);
         }
     }
 
@@ -352,10 +371,11 @@ public class DocumentService {
         return normalized.isEmpty() ? null : normalized;
     }
 
-    private BusinessException storageUnavailable() {
+    private BusinessException storageUnavailable(Throwable cause) {
         return new BusinessException(
                 ApiErrorCode.DOCUMENT_STORAGE_ERROR,
-                "No fue posible acceder al almacenamiento de documentos."
+                "No fue posible acceder al almacenamiento de documentos.",
+                cause
         );
     }
 

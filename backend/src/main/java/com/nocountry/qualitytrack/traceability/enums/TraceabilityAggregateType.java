@@ -4,5 +4,6 @@ public enum TraceabilityAggregateType {
     CUSTOMER_REQUEST,
     JOB_CASE,
     DOCUMENT,
-    DOCUMENT_VERSION
+    DOCUMENT_VERSION,
+    QUOTATION
 }
