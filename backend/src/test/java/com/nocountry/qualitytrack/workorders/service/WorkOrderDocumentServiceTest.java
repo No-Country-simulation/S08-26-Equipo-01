@@ -6,6 +6,9 @@ import com.nocountry.qualitytrack.documents.enums.DocumentStatus;
 import com.nocountry.qualitytrack.documents.repository.DocumentRepository;
 import com.nocountry.qualitytrack.documents.repository.DocumentVersionRepository;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
+import com.nocountry.qualitytrack.routing.enums.RoutingSheetStatus;
+import com.nocountry.qualitytrack.routing.repository.RoutingSheetRepository;
+import com.nocountry.qualitytrack.shared.exception.BusinessException;
 import com.nocountry.qualitytrack.traceability.service.TraceabilityService;
 import com.nocountry.qualitytrack.users.entity.User;
 import com.nocountry.qualitytrack.workorders.entity.WorkOrder;
@@ -22,10 +25,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -35,6 +40,7 @@ class WorkOrderDocumentServiceTest {
 
     @Mock private WorkOrderDocumentRepository linkRepository;
     @Mock private WorkOrderRepository workOrderRepository;
+    @Mock private RoutingSheetRepository routingSheetRepository;
     @Mock private DocumentRepository documentRepository;
     @Mock private DocumentVersionRepository versionRepository;
     @Mock private WorkOrderAccessPolicy accessPolicy;
@@ -53,6 +59,7 @@ class WorkOrderDocumentServiceTest {
         service = new WorkOrderDocumentService(
                 linkRepository,
                 workOrderRepository,
+                routingSheetRepository,
                 documentRepository,
                 versionRepository,
                 accessPolicy,
@@ -128,6 +135,22 @@ class WorkOrderDocumentServiceTest {
         assertEquals(2, metadata.get("previousVersion"));
         assertEquals(31L, metadata.get("documentVersionId"));
         assertEquals(3, metadata.get("version"));
+    }
+
+    @Test
+    void pinIsBlockedAfterRoutingApproval() {
+        when(accessPolicy.requirePlanningActor(10L)).thenReturn(actor);
+        when(workOrderRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(workOrder));
+        when(workOrder.getStatus()).thenReturn(WorkOrderStatus.CREATED);
+        when(routingSheetRepository.existsByWorkOrder_IdAndStatusIn(
+                7L,
+                List.of(RoutingSheetStatus.APPROVED, RoutingSheetStatus.RELEASED)
+        )).thenReturn(true);
+
+        assertThrows(
+                BusinessException.class,
+                () -> service.pin(10L, 7L, 20L, 31L)
+        );
     }
 
     private void stubCommonPinContext() {

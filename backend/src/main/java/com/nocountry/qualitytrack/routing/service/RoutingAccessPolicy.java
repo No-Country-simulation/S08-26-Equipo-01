@@ -1,4 +1,4 @@
-package com.nocountry.qualitytrack.workorders.service;
+package com.nocountry.qualitytrack.routing.service;
 
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
@@ -13,40 +13,15 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
-public class WorkOrderAccessPolicy {
+public class RoutingAccessPolicy {
 
     private final UserRepository userRepository;
     private final UserSystemRoleRepository userSystemRoleRepository;
 
-    public User requireCreationActor(Long userId) {
+    public User requireDesignerActor(Long userId) {
         User user = requireInternalUser(userId);
-        if (!hasAnyRole(
-                userId,
-                SystemRole.ADMIN,
-                SystemRole.COMMERCIAL
-        )) {
-            denied("Tu rol interno no permite crear órdenes de trabajo.");
-        }
-        return user;
-    }
-
-    public User requirePlanningActor(Long userId) {
-        User user = requireInternalUser(userId);
-        if (!hasAnyRole(
-                userId,
-                SystemRole.ADMIN,
-                SystemRole.COMMERCIAL,
-                SystemRole.ENGINEERING
-        )) {
-            denied("Tu rol interno no permite preparar órdenes de trabajo.");
-        }
-        return user;
-    }
-
-    public User requireProductionActor(Long userId) {
-        User user = requireInternalUser(userId);
-        if (!hasAnyRole(userId, SystemRole.ADMIN, SystemRole.PRODUCTION)) {
-            denied("Tu rol interno no permite gestionar producción.");
+        if (!hasAnyRole(userId, SystemRole.ADMIN, SystemRole.ENGINEERING)) {
+            denied("Tu rol interno no permite diseñar o liberar hojas de ruta.");
         }
         return user;
     }
@@ -63,7 +38,7 @@ public class WorkOrderAccessPolicy {
                 SystemRole.LOGISTICS,
                 SystemRole.AUDITOR
         )) {
-            denied("Tu rol interno no permite consultar órdenes de trabajo.");
+            denied("Tu rol interno no permite consultar hojas de ruta.");
         }
     }
 

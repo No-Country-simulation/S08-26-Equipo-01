@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
 @Documented
 @Tag(
         name = "08 · Órdenes de trabajo",
-        description = "Gestión de la única orden de trabajo 1:1 de cada expediente: origen comercial aprobado, planificación operativa y versiones documentales fijadas antes de routing y ejecución."
+        description = "Gestión de la única orden de trabajo 1:1 de cada expediente: origen comercial aprobado, snapshot operativo de cantidad, planificación y versiones documentales fijadas antes de routing y ejecución."
 )
 public @interface WorkOrderApiDocs {
 }

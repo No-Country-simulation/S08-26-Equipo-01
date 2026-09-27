@@ -18,7 +18,7 @@ import java.lang.annotation.Target;
 @Documented
 @Operation(
         summary = "Crear orden de trabajo",
-        description = "Crea la única WorkOrder 1:1 del JobCase. Requiere que el expediente esté READY_FOR_QUOTATION y tenga una cotización APPROVED. ADMIN, COMMERCIAL o PRODUCTION pueden crearla. La orden inicia en CREATED, referencia exactamente la revisión aprobada, recibe prioridad e inicio/fin planeados, copia como fecha comprometida la estimatedDeliveryDate y mueve el JobCase a IN_PRODUCTION. El fin planeado debe ser anterior a la entrega comprometida."
+        description = "Crea la única WorkOrder 1:1 del JobCase. Requiere que el expediente esté READY_FOR_QUOTATION y tenga una cotización APPROVED. ADMIN o COMMERCIAL pueden crearla. La orden inicia en CREATED, referencia exactamente la revisión aprobada, toma plannedQuantity como snapshot de la cantidad solicitada, recibe prioridad e inicio/fin planeados, copia como fecha comprometida la estimatedDeliveryDate y mueve el JobCase a IN_PRODUCTION. El fin planeado debe ser anterior a la entrega comprometida."
 )
 @ApiResponses({
         @ApiResponse(responseCode = "201", description = "Orden de trabajo creada correctamente"),

@@ -15,6 +15,7 @@ import com.nocountry.qualitytrack.traceability.service.TraceabilityService;
 import com.nocountry.qualitytrack.users.entity.User;
 import com.nocountry.qualitytrack.workorders.dto.request.CancelWorkOrderRequest;
 import com.nocountry.qualitytrack.workorders.dto.request.CreateWorkOrderRequest;
+import com.nocountry.qualitytrack.workorders.dto.request.UpdateWorkOrderPlanningRequest;
 import com.nocountry.qualitytrack.workorders.entity.WorkOrder;
 import com.nocountry.qualitytrack.workorders.enums.WorkOrderPriority;
 import com.nocountry.qualitytrack.workorders.enums.WorkOrderStatus;
@@ -96,6 +97,7 @@ class WorkOrderWorkflowServiceTest {
         assertEquals(WorkOrderStatus.CREATED, response.status());
         assertEquals("OT-00000001", response.workOrderNumber());
         assertEquals(WorkOrderPriority.NORMAL, response.priority());
+        assertEquals(25, response.plannedQuantity());
         assertEquals(LocalDate.of(2026, 10, 1), response.plannedStartDate());
         assertEquals(LocalDate.of(2026, 10, 15), response.plannedEndDate());
         assertEquals(approved.getEstimatedDeliveryDate(), response.agreedDeliveryDate());
@@ -155,6 +157,67 @@ class WorkOrderWorkflowServiceTest {
 
         assertThrows(BusinessException.class, () -> service.create(10L, 3L, invalid));
         verify(workOrderRepository, never()).saveAndFlush(any(WorkOrder.class));
+    }
+
+    @Test
+    void updatePlanningChangesOnlyOperationalPlanning() {
+        JobCase jobCase = readyJobCase();
+        jobCase.markInProduction();
+        Quotation approved = approvedQuotation(jobCase);
+        WorkOrder workOrder = workOrder(jobCase, approved);
+        ReflectionTestUtils.setField(workOrder, "id", 7L);
+
+        when(accessPolicy.requirePlanningActor(10L)).thenReturn(commercialUser);
+        when(workOrderRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(workOrder));
+        when(workOrderRepository.saveAndFlush(workOrder)).thenReturn(workOrder);
+        when(documentService.listPinned(7L)).thenReturn(List.of());
+
+        var response = service.updatePlanning(
+                10L,
+                7L,
+                new UpdateWorkOrderPlanningRequest(
+                        WorkOrderPriority.HIGH,
+                        LocalDate.of(2026, 10, 2),
+                        LocalDate.of(2026, 10, 18)
+                )
+        );
+
+        assertEquals(WorkOrderPriority.HIGH, response.priority());
+        assertEquals(LocalDate.of(2026, 10, 2), response.plannedStartDate());
+        assertEquals(LocalDate.of(2026, 10, 18), response.plannedEndDate());
+        assertEquals(25, response.plannedQuantity());
+        assertEquals(approved.getEstimatedDeliveryDate(), response.agreedDeliveryDate());
+        verify(traceabilityService).record(
+                any(), any(), any(), any(), any(), any(), any(), any()
+        );
+    }
+
+    @Test
+    void updatePlanningRejectsWorkOrderOutsideCreated() {
+        JobCase jobCase = readyJobCase();
+        jobCase.markInProduction();
+        Quotation approved = approvedQuotation(jobCase);
+        WorkOrder workOrder = workOrder(jobCase, approved);
+        ReflectionTestUtils.setField(workOrder, "id", 7L);
+        workOrder.releaseToProduction();
+
+        when(accessPolicy.requirePlanningActor(10L)).thenReturn(commercialUser);
+        when(workOrderRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(workOrder));
+
+        assertThrows(
+                BusinessException.class,
+                () -> service.updatePlanning(
+                        10L,
+                        7L,
+                        new UpdateWorkOrderPlanningRequest(
+                                WorkOrderPriority.HIGH,
+                                LocalDate.of(2026, 10, 2),
+                                LocalDate.of(2026, 10, 18)
+                        )
+                )
+        );
+
+        verify(workOrderRepository, never()).saveAndFlush(workOrder);
     }
 
     @Test
@@ -253,6 +316,7 @@ class WorkOrderWorkflowServiceTest {
                 approved,
                 "OT-00000001",
                 WorkOrderPriority.NORMAL,
+                25,
                 LocalDate.of(2026, 10, 1),
                 LocalDate.of(2026, 10, 15),
                 approved.getEstimatedDeliveryDate(),

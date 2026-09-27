@@ -47,10 +47,20 @@ class WorkOrderAccessPolicyTest {
     }
 
     @Test
-    void productionCanCreateAndManageWorkOrders() {
+    void productionCannotCreateOrPrepareWorkOrdersButCanManageProduction() {
         allowInternal(SystemRole.PRODUCTION);
 
-        assertSame(user, policy.requireCreationActor(10L));
+        BusinessException createException = assertThrows(
+                BusinessException.class,
+                () -> policy.requireCreationActor(10L)
+        );
+        BusinessException planningException = assertThrows(
+                BusinessException.class,
+                () -> policy.requirePlanningActor(10L)
+        );
+
+        assertEquals(ApiErrorCode.ACCESS_DENIED, createException.getCode());
+        assertEquals(ApiErrorCode.ACCESS_DENIED, planningException.getCode());
         assertSame(user, policy.requireProductionActor(10L));
     }
 

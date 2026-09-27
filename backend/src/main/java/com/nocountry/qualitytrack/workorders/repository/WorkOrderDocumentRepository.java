@@ -11,6 +11,8 @@ public interface WorkOrderDocumentRepository extends JpaRepository<WorkOrderDocu
 
     boolean existsByDocument_Id(Long documentId);
 
+    boolean existsByWorkOrder_Id(Long workOrderId);
+
     @EntityGraph(attributePaths = {
             "document",
             "documentVersion",

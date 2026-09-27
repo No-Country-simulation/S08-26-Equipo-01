@@ -14,8 +14,10 @@ import com.nocountry.qualitytrack.traceability.service.TraceabilityService;
 import com.nocountry.qualitytrack.users.entity.User;
 import com.nocountry.qualitytrack.workorders.dto.request.CancelWorkOrderRequest;
 import com.nocountry.qualitytrack.workorders.dto.request.CreateWorkOrderRequest;
+import com.nocountry.qualitytrack.workorders.dto.request.UpdateWorkOrderPlanningRequest;
 import com.nocountry.qualitytrack.workorders.dto.response.WorkOrderDetailResponse;
 import com.nocountry.qualitytrack.workorders.entity.WorkOrder;
+import com.nocountry.qualitytrack.workorders.enums.WorkOrderPriority;
 import com.nocountry.qualitytrack.workorders.enums.WorkOrderStatus;
 import com.nocountry.qualitytrack.workorders.repository.WorkOrderRepository;
 import lombok.RequiredArgsConstructor;
@@ -23,6 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -69,6 +72,7 @@ public class WorkOrderWorkflowService {
                     approvedQuotation,
                     referenceGenerator.nextWorkOrderNumber(),
                     input.priority(),
+                    jobCase.getCustomerRequest().getQuantity(),
                     input.plannedStartDate(),
                     input.plannedEndDate(),
                     approvedQuotation.getEstimatedDeliveryDate(),
@@ -98,6 +102,7 @@ public class WorkOrderWorkflowService {
                         "quotationNumber", approvedQuotation.getQuotationNumber(),
                         "quotationRevision", approvedQuotation.getRevision(),
                         "priority", workOrder.getPriority(),
+                        "plannedQuantity", workOrder.getPlannedQuantity(),
                         "plannedStartDate", workOrder.getPlannedStartDate(),
                         "plannedEndDate", workOrder.getPlannedEndDate(),
                         "agreedDeliveryDate", workOrder.getAgreedDeliveryDate()
@@ -116,6 +121,59 @@ public class WorkOrderWorkflowService {
                         "caseNumber", jobCase.getCaseNumber(),
                         "workOrderId", workOrder.getId(),
                         "workOrderNumber", workOrder.getWorkOrderNumber()
+                )
+        );
+
+        return detail(currentUserId, workOrder);
+    }
+
+    @Transactional
+    public WorkOrderDetailResponse updatePlanning(
+            Long currentUserId,
+            Long workOrderId,
+            UpdateWorkOrderPlanningRequest input
+    ) {
+        accessPolicy.requirePlanningActor(currentUserId);
+
+        WorkOrder workOrder = workOrderRepository.findByIdForUpdate(workOrderId)
+                .orElseThrow(() -> new BusinessException(
+                        ApiErrorCode.RESOURCE_NOT_FOUND,
+                        "No se encontró la orden de trabajo."
+                ));
+
+        WorkOrderPriority previousPriority = workOrder.getPriority();
+        LocalDate previousStartDate = workOrder.getPlannedStartDate();
+        LocalDate previousEndDate = workOrder.getPlannedEndDate();
+
+        try {
+            workOrder.updatePlanning(
+                    input.priority(),
+                    input.plannedStartDate(),
+                    input.plannedEndDate()
+            );
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            conflict(exception.getMessage());
+        }
+
+        workOrder = workOrderRepository.saveAndFlush(workOrder);
+
+        traceabilityService.record(
+                workOrder.getJobCase(),
+                TraceabilityAggregateType.WORK_ORDER,
+                workOrder.getId(),
+                TraceabilityEventType.WORK_ORDER_PLANNING_UPDATED,
+                workOrder.getStatus().name(),
+                workOrder.getStatus().name(),
+                currentUserId,
+                metadata(
+                        "workOrderNumber", workOrder.getWorkOrderNumber(),
+                        "previousPriority", previousPriority,
+                        "previousPlannedStartDate", previousStartDate,
+                        "previousPlannedEndDate", previousEndDate,
+                        "priority", workOrder.getPriority(),
+                        "plannedStartDate", workOrder.getPlannedStartDate(),
+                        "plannedEndDate", workOrder.getPlannedEndDate(),
+                        "agreedDeliveryDate", workOrder.getAgreedDeliveryDate()
                 )
         );
 

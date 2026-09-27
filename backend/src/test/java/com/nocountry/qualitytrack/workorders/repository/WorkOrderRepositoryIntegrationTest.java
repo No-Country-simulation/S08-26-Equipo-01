@@ -57,6 +57,7 @@ class WorkOrderRepositoryIntegrationTest {
         assertEquals("OT-MAPPING", workOrder.getWorkOrderNumber());
         assertEquals(WorkOrderStatus.CREATED, workOrder.getStatus());
         assertEquals(WorkOrderPriority.NORMAL, workOrder.getPriority());
+        assertEquals(25, workOrder.getPlannedQuantity());
         assertEquals(LocalDate.of(2026, 10, 1), workOrder.getPlannedStartDate());
         assertEquals(LocalDate.of(2026, 10, 15), workOrder.getPlannedEndDate());
         assertEquals(fixture.quotationId(), workOrder.getApprovedQuotation().getId());
@@ -109,12 +110,13 @@ class WorkOrderRepositoryIntegrationTest {
                             work_order_number,
                             status,
                             priority,
+                            planned_quantity,
                             planned_start_date,
                             planned_end_date,
                             agreed_delivery_date,
                             created_by_user_id
                         )
-                        VALUES (?, ?, ?, 'CREATED', 'NORMAL', ?, ?, ?, ?)
+                        VALUES (?, ?, ?, 'CREATED', 'NORMAL', 25, ?, ?, ?, ?)
                         """,
                         fixture.caseId(),
                         fixture.quotationId(),
@@ -413,12 +415,13 @@ class WorkOrderRepositoryIntegrationTest {
                     work_order_number,
                     status,
                     priority,
+                    planned_quantity,
                     planned_start_date,
                     planned_end_date,
                     agreed_delivery_date,
                     created_by_user_id
                 )
-                VALUES (?, ?, ?, ?, 'NORMAL', ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, 'NORMAL', 25, ?, ?, ?, ?)
                 RETURNING id
                 """,
                 Long.class,

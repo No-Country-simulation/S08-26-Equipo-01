@@ -56,6 +56,9 @@ public class WorkOrder {
     @Column(nullable = false)
     private WorkOrderPriority priority;
 
+    @Column(name = "planned_quantity", nullable = false)
+    private Integer plannedQuantity;
+
     @Column(name = "planned_start_date")
     private LocalDate plannedStartDate;
 
@@ -92,6 +95,7 @@ public class WorkOrder {
             Quotation approvedQuotation,
             String workOrderNumber,
             WorkOrderPriority priority,
+            Integer plannedQuantity,
             LocalDate plannedStartDate,
             LocalDate plannedEndDate,
             LocalDate agreedDeliveryDate,
@@ -101,6 +105,7 @@ public class WorkOrder {
         this.approvedQuotation = Objects.requireNonNull(approvedQuotation);
         this.workOrderNumber = requireText(workOrderNumber, "El número de orden de trabajo es obligatorio.");
         this.priority = Objects.requireNonNull(priority);
+        this.plannedQuantity = requirePositive(plannedQuantity, "La cantidad planeada debe ser mayor a cero.");
         this.plannedStartDate = Objects.requireNonNull(plannedStartDate);
         this.plannedEndDate = Objects.requireNonNull(plannedEndDate);
         this.agreedDeliveryDate = Objects.requireNonNull(agreedDeliveryDate);
@@ -114,6 +119,7 @@ public class WorkOrder {
             Quotation approvedQuotation,
             String workOrderNumber,
             WorkOrderPriority priority,
+            Integer plannedQuantity,
             LocalDate plannedStartDate,
             LocalDate plannedEndDate,
             LocalDate agreedDeliveryDate,
@@ -124,11 +130,50 @@ public class WorkOrder {
                 approvedQuotation,
                 workOrderNumber,
                 priority,
+                plannedQuantity,
                 plannedStartDate,
                 plannedEndDate,
                 agreedDeliveryDate,
                 createdByUser
         );
+    }
+
+    public void updatePlanning(
+            WorkOrderPriority priority,
+            LocalDate plannedStartDate,
+            LocalDate plannedEndDate
+    ) {
+        if (status != WorkOrderStatus.CREATED) {
+            throw new IllegalStateException(
+                    "Solo una orden de trabajo en CREATED puede replanificarse."
+            );
+        }
+
+        WorkOrderPriority nextPriority = Objects.requireNonNull(priority);
+        LocalDate nextStartDate = Objects.requireNonNull(plannedStartDate);
+        LocalDate nextEndDate = Objects.requireNonNull(plannedEndDate);
+
+        validatePlanningDates(nextStartDate, nextEndDate, agreedDeliveryDate);
+
+        this.priority = nextPriority;
+        this.plannedStartDate = nextStartDate;
+        this.plannedEndDate = nextEndDate;
+    }
+
+    public void releaseToProduction() {
+        if (status != WorkOrderStatus.CREATED) {
+            throw new IllegalStateException(
+                    "Solo una orden de trabajo en CREATED puede liberarse a producción."
+            );
+        }
+        if (plannedQuantity == null || plannedQuantity <= 0
+                || plannedStartDate == null
+                || plannedEndDate == null) {
+            throw new IllegalStateException(
+                    "La orden de trabajo necesita planificación completa antes de liberarse."
+            );
+        }
+        this.status = WorkOrderStatus.READY_FOR_PRODUCTION;
     }
 
     public void cancel(User actor, String reason, Instant cancelledAt) {
@@ -159,6 +204,13 @@ public class WorkOrder {
                     "La fabricación debe terminar antes de la fecha comprometida de entrega."
             );
         }
+    }
+
+    private static Integer requirePositive(Integer value, String message) {
+        if (value == null || value <= 0) {
+            throw new IllegalArgumentException(message);
+        }
+        return value;
     }
 
     private static String requireText(String value, String message) {
