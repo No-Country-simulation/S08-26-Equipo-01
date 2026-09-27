@@ -17,6 +17,7 @@ import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
 import com.nocountry.qualitytrack.users.entity.User;
 import com.nocountry.qualitytrack.users.enums.AccountType;
+import com.nocountry.qualitytrack.workorders.repository.WorkOrderDocumentRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,6 +49,7 @@ public class DocumentService {
     private final JobCaseRepository jobCaseRepository;
     private final DocumentAccessService accessService;
     private final DocumentStorage storage;
+    private final WorkOrderDocumentRepository workOrderDocumentRepository;
 
     @Transactional
     public DocumentResponse create(
@@ -246,6 +248,13 @@ public class DocumentService {
                 ));
 
         User remover = accessService.requireCanRemove(currentUserId, document);
+        if (workOrderDocumentRepository.existsByDocument_Id(documentId)) {
+            throw new BusinessException(
+                    ApiErrorCode.DATA_CONFLICT,
+                    "El documento está fijado a una orden de trabajo y no puede eliminarse."
+            );
+        }
+
         String documentName = document.getName();
         document.remove(remover, Instant.now());
         documentRepository.saveAndFlush(document);

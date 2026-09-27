@@ -169,6 +169,7 @@ public class DocumentAccessService {
 
     private void requireOpenForCustomerWrite(JobCase jobCase) {
         if (jobCase.getStatus() == JobCaseStatus.READY_FOR_QUOTATION
+                || jobCase.getStatus() == JobCaseStatus.IN_PRODUCTION
                 || jobCase.getStatus() == JobCaseStatus.CANCELLED) {
             throw new BusinessException(
                     ApiErrorCode.DATA_CONFLICT,
@@ -190,6 +191,9 @@ public class DocumentAccessService {
         return role == SystemRole.ADMIN
                 || role == SystemRole.COMMERCIAL
                 || role == SystemRole.ENGINEERING
+                || role == SystemRole.PRODUCTION
+                || role == SystemRole.QUALITY
+                || role == SystemRole.LOGISTICS
                 || role == SystemRole.AUDITOR;
     }
 

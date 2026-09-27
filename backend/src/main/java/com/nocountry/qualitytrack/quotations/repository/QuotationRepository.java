@@ -76,6 +76,17 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
             "jobCase",
             "jobCase.customerRequest",
             "jobCase.customerRequest.customer",
+            "createdByUser"
+    })
+    Optional<Quotation> findByJobCase_IdAndStatus(
+            Long caseId,
+            QuotationStatus status
+    );
+
+    @EntityGraph(attributePaths = {
+            "jobCase",
+            "jobCase.customerRequest",
+            "jobCase.customerRequest.customer",
             "createdByUser",
             "cancelledByUser"
     })

@@ -18,6 +18,7 @@ import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
 import com.nocountry.qualitytrack.users.entity.User;
 import com.nocountry.qualitytrack.users.enums.AccountType;
+import com.nocountry.qualitytrack.workorders.repository.WorkOrderDocumentRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -60,6 +61,9 @@ class DocumentServiceTest {
     private DocumentStorage storage;
 
     @Mock
+    private WorkOrderDocumentRepository workOrderDocumentRepository;
+
+    @Mock
     private JobCase jobCase;
 
     @Mock
@@ -80,7 +84,8 @@ class DocumentServiceTest {
                 documentVersionRepository,
                 jobCaseRepository,
                 accessService,
-                storage
+                storage,
+                workOrderDocumentRepository
         );
     }
 
@@ -285,6 +290,7 @@ class DocumentServiceTest {
                 DocumentStatus.ACTIVE
         )).thenReturn(Optional.of(document));
         when(accessService.requireCanRemove(10L, document)).thenReturn(user);
+        when(workOrderDocumentRepository.existsByDocument_Id(7L)).thenReturn(false);
         when(documentRepository.saveAndFlush(document)).thenReturn(document);
 
         String removedDocumentName = service.remove(10L, 12L, 7L);
@@ -294,6 +300,28 @@ class DocumentServiceTest {
         assertSame(user, document.getRemovedBy());
         assertNotNull(document.getRemovedAt());
         verify(documentRepository).saveAndFlush(document);
+        verifyNoInteractions(storage);
+    }
+
+    @Test
+    void refusesToRemoveDocumentPinnedToWorkOrder() {
+        Document document = Document.create(jobCase, "DRAWING", "Plano", null, user);
+
+        when(documentRepository.findByIdAndCaseIdAndStatusForUpdate(
+                7L,
+                12L,
+                DocumentStatus.ACTIVE
+        )).thenReturn(Optional.of(document));
+        when(accessService.requireCanRemove(10L, document)).thenReturn(user);
+        when(workOrderDocumentRepository.existsByDocument_Id(7L)).thenReturn(true);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.remove(10L, 12L, 7L)
+        );
+
+        assertEquals(ApiErrorCode.DATA_CONFLICT, exception.getCode());
+        assertEquals(DocumentStatus.ACTIVE, document.getStatus());
         verifyNoInteractions(storage);
     }
 

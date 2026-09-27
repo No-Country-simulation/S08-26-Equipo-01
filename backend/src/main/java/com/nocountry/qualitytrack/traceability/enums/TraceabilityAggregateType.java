@@ -5,5 +5,6 @@ public enum TraceabilityAggregateType {
     JOB_CASE,
     DOCUMENT,
     DOCUMENT_VERSION,
-    QUOTATION
+    QUOTATION,
+    WORK_ORDER
 }

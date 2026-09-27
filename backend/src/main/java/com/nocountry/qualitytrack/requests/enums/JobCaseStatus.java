@@ -5,5 +5,6 @@ public enum JobCaseStatus {
     UNDER_REVIEW,
     WAITING_CUSTOMER_INFO,
     READY_FOR_QUOTATION,
+    IN_PRODUCTION,
     CANCELLED
 }

@@ -123,6 +123,16 @@ public class JobCase {
         this.status = JobCaseStatus.READY_FOR_QUOTATION;
     }
 
+    public void markInProduction() {
+        if (status != JobCaseStatus.READY_FOR_QUOTATION) {
+            throw new IllegalStateException(
+                    "Solo se puede iniciar producción desde READY_FOR_QUOTATION."
+            );
+        }
+
+        this.status = JobCaseStatus.IN_PRODUCTION;
+    }
+
     public boolean canBeCancelled() {
         return status == JobCaseStatus.SUBMITTED
                 || status == JobCaseStatus.UNDER_REVIEW
@@ -134,10 +144,39 @@ public class JobCase {
             throw new IllegalStateException("El expediente no se encuentra en un estado cancelable.");
         }
 
+        applyCancellation(cancelledByUser, cancellationReason, cancelledAt);
+    }
+
+    public void cancelFromProduction(
+            User cancelledByUser,
+            String cancellationReason,
+            Instant cancelledAt
+    ) {
+        if (status != JobCaseStatus.IN_PRODUCTION) {
+            throw new IllegalStateException(
+                    "Solo un expediente IN_PRODUCTION puede cancelarse desde producción."
+            );
+        }
+
+        applyCancellation(cancelledByUser, cancellationReason, cancelledAt);
+    }
+
+    private void applyCancellation(
+            User cancelledByUser,
+            String cancellationReason,
+            Instant cancelledAt
+    ) {
         this.cancelledByUser = Objects.requireNonNull(cancelledByUser);
         this.cancelledAt = Objects.requireNonNull(cancelledAt);
-        this.cancellationReason = cancellationReason;
+        this.cancellationReason = normalizeOptional(cancellationReason);
         this.closedAt = cancelledAt;
         this.status = JobCaseStatus.CANCELLED;
+    }
+
+    private static String normalizeOptional(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 }

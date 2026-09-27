@@ -185,16 +185,12 @@ class JobCaseServiceTest {
     }
 
     @Test
-    void rejectsInternalRoleWithoutCaseVisibility() {
+    void allowsProductionToListJobCases() {
         allowInternal(SystemRole.PRODUCTION);
+        when(jobCaseRepository.findAllByOrderByOpenedAtDesc()).thenReturn(List.of());
 
-        BusinessException exception = assertThrows(
-                BusinessException.class,
-                () -> service.list(10L)
-        );
-
-        assertEquals(ApiErrorCode.ACCESS_DENIED, exception.getCode());
-        verify(jobCaseRepository, never()).findAllByOrderByOpenedAtDesc();
+        assertEquals(0, service.list(10L).size());
+        verify(jobCaseRepository).findAllByOrderByOpenedAtDesc();
     }
 
     private void allowInternal(SystemRole role) {

@@ -122,6 +122,9 @@ public class JobCaseService {
         return role == SystemRole.ADMIN
                 || role == SystemRole.COMMERCIAL
                 || role == SystemRole.ENGINEERING
+                || role == SystemRole.PRODUCTION
+                || role == SystemRole.QUALITY
+                || role == SystemRole.LOGISTICS
                 || role == SystemRole.AUDITOR;
     }
 }

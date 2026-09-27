@@ -33,8 +33,8 @@ class QualityTrackApplicationTests {
     private Flyway flyway;
 
     @Test
-    void contextLoadsAndFlywayAppliesLatestMigration() {
+    void contextLoadsAndFlywayAppliesAllMigrations() {
         assertNotNull(flyway.info().current());
-        assertEquals("14", flyway.info().current().getVersion().getVersion());
+        assertEquals(0, flyway.info().pending().length);
     }
 }
