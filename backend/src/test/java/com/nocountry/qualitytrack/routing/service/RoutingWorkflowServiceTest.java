@@ -1,5 +1,7 @@
 package com.nocountry.qualitytrack.routing.service;
 
+import com.nocountry.qualitytrack.nonconformities.entity.NonConformity;
+import com.nocountry.qualitytrack.quality.entity.QualityInspection;
 import com.nocountry.qualitytrack.quotations.entity.Quotation;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.routing.dto.request.ReopenRoutingSheetRequest;
@@ -164,6 +166,74 @@ class RoutingWorkflowServiceTest {
         assertEquals(WorkOrderStatus.READY_FOR_PRODUCTION, response.workOrderStatus());
         assertEquals(WorkOrderStatus.READY_FOR_PRODUCTION, workOrder.getStatus());
         verify(traceabilityService, times(2)).record(
+                any(), any(), any(), any(), any(), any(), any(), any()
+        );
+    }
+
+    @Test
+    void releasingReworkRoutingKeepsOrderOnQualityHoldUntilExecutionStarts() {
+        workOrder.releaseToProduction();
+        workOrder.startProduction(Instant.parse("2026-09-27T08:00:00Z"));
+        workOrder.markProductionCompleted(Instant.parse("2026-09-27T16:00:00Z"));
+
+        QualityInspection inspection = QualityInspection.createPending(workOrder);
+        ReflectionTestUtils.setField(inspection, "id", 100L);
+        workOrder.sendToQuality();
+        inspection.start(actor, Instant.parse("2026-09-27T17:00:00Z"));
+        inspection.reject(Instant.parse("2026-09-27T17:30:00Z"));
+        workOrder.holdForQuality();
+
+        NonConformity nonConformity = NonConformity.open(
+                "NC-0001",
+                workOrder,
+                inspection,
+                actor,
+                Instant.parse("2026-09-27T17:30:00Z")
+        );
+        ReflectionTestUtils.setField(nonConformity, "id", 300L);
+        nonConformity.updateDetails(
+                1,
+                "MAJOR",
+                "Diámetro fuera de tolerancia."
+        );
+        nonConformity.selectRework();
+
+        RoutingSheet reworkRouting = RoutingSheet.createRework(
+                workOrder,
+                2,
+                nonConformity,
+                actor
+        );
+        reworkRouting.addOperation(
+                10,
+                "RW-TURN",
+                "Corrección",
+                "Retrabajar diámetro.",
+                45
+        );
+        ReflectionTestUtils.setField(reworkRouting, "id", 30L);
+        reworkRouting.approve(
+                actor,
+                Instant.parse("2026-09-27T18:00:00Z")
+        );
+
+        when(routingSheetRepository.findWorkOrderIdById(30L))
+                .thenReturn(Optional.of(7L));
+        when(workOrderRepository.findByIdForUpdate(7L))
+                .thenReturn(Optional.of(workOrder));
+        when(routingSheetRepository.findByIdForUpdate(30L))
+                .thenReturn(Optional.of(reworkRouting));
+        when(accessPolicy.requireDesignerActor(10L)).thenReturn(actor);
+        when(documentRepository.existsByWorkOrder_Id(7L)).thenReturn(true);
+        when(routingSheetRepository.saveAndFlush(reworkRouting))
+                .thenReturn(reworkRouting);
+
+        var response = service.release(10L, 30L);
+
+        assertEquals(RoutingSheetStatus.RELEASED, response.status());
+        assertEquals(WorkOrderStatus.QUALITY_HOLD, response.workOrderStatus());
+        assertEquals(WorkOrderStatus.QUALITY_HOLD, workOrder.getStatus());
+        verify(traceabilityService).record(
                 any(), any(), any(), any(), any(), any(), any(), any()
         );
     }

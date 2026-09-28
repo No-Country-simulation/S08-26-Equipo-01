@@ -19,6 +19,7 @@ public record RoutingSheetResponse(
         Integer revision,
         RoutingPurpose purpose,
         RoutingSheetStatus status,
+        Long nonConformityId,
         Integer totalEstimatedMinutes,
         List<RoutingOperationResponse> operations,
         Long createdByUserId,
@@ -47,6 +48,9 @@ public record RoutingSheetResponse(
                 routingSheet.getRevision(),
                 routingSheet.getPurpose(),
                 routingSheet.getStatus(),
+                routingSheet.getNonConformity() == null
+                        ? null
+                        : routingSheet.getNonConformity().getId(),
                 routingSheet.totalEstimatedMinutes(),
                 operations,
                 routingSheet.getCreatedByUser().getId(),

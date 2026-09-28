@@ -51,6 +51,30 @@ public class WorkOrderAccessPolicy {
         return user;
     }
 
+    public User requireQualityActor(Long userId) {
+        User user = requireInternalUser(userId);
+        if (!hasAnyRole(userId, SystemRole.ADMIN, SystemRole.QUALITY)) {
+            denied("Tu rol interno no permite gestionar Calidad.");
+        }
+        return user;
+    }
+
+    public User requireAssignedQualityActor(Long userId, Long inspectorUserId) {
+        User user = requireInternalUser(userId);
+
+        if (hasAnyRole(userId, SystemRole.ADMIN)) {
+            return user;
+        }
+
+        if (inspectorUserId == null
+                || !userId.equals(inspectorUserId)
+                || !hasAnyRole(userId, SystemRole.QUALITY)) {
+            denied("Solo el inspector asignado o un ADMIN puede modificar la inspección.");
+        }
+
+        return user;
+    }
+
     public void requireInternalReader(Long userId) {
         requireInternalUser(userId);
         if (!hasAnyRole(

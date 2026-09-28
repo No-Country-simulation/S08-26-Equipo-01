@@ -18,7 +18,7 @@ import java.lang.annotation.Target;
 @Documented
 @Operation(
         summary = "Consultar producción de una OT",
-        description = "Devuelve el estado de Producción de una WorkOrder, sus tiempos reales y el historial de ejecuciones de las operaciones."
+        description = "Devuelve el estado operativo de una WorkOrder, sus tiempos reales y el historial de ejecuciones de PRODUCTION y REWORK, identificadas por routingSheetId, routingRevision y routingPurpose."
 )
 @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Producción consultada correctamente"),

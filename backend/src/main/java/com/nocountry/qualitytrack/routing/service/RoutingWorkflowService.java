@@ -134,26 +134,39 @@ public class RoutingWorkflowService {
         WorkOrder workOrder = locked.workOrder();
         RoutingSheet routingSheet = locked.routingSheet();
 
-        if (routingSheet.getPurpose() != RoutingPurpose.PRODUCTION) {
-            conflict("En esta etapa solo puede liberarse la ruta de producción.");
-        }
         if (routingSheet.getStatus() != RoutingSheetStatus.APPROVED) {
             conflict("La hoja de ruta debe estar APPROVED antes de liberarse.");
         }
-        if (workOrder.getStatus() != WorkOrderStatus.CREATED) {
-            conflict("La orden de trabajo debe estar en CREATED para liberarse.");
-        }
-        if (workOrder.getPlannedQuantity() == null
-                || workOrder.getPlannedQuantity() <= 0
-                || workOrder.getPlannedStartDate() == null
-                || workOrder.getPlannedEndDate() == null) {
-            conflict("La orden de trabajo necesita planificación completa antes de liberarse.");
-        }
         if (!workOrderDocumentRepository.existsByWorkOrder_Id(workOrder.getId())) {
-            conflict("La orden de trabajo necesita al menos un documento fijado antes de liberarse.");
+            conflict("La orden de trabajo necesita al menos un documento fijado antes de liberar una ruta.");
         }
         if (routingSheet.getOperations().isEmpty()) {
             conflict("La hoja de ruta necesita al menos una operación antes de liberarse.");
+        }
+
+        boolean productionRouting = routingSheet.getPurpose() == RoutingPurpose.PRODUCTION;
+
+        if (productionRouting) {
+            if (workOrder.getStatus() != WorkOrderStatus.CREATED) {
+                conflict("La orden de trabajo debe estar en CREATED para liberar la ruta de producción.");
+            }
+            if (workOrder.getPlannedQuantity() == null
+                    || workOrder.getPlannedQuantity() <= 0
+                    || workOrder.getPlannedStartDate() == null
+                    || workOrder.getPlannedEndDate() == null) {
+                conflict("La orden de trabajo necesita planificación completa antes de liberarse.");
+            }
+        } else {
+            if (workOrder.getStatus() != WorkOrderStatus.QUALITY_HOLD) {
+                conflict("La orden debe estar QUALITY_HOLD para liberar una ruta REWORK.");
+            }
+            if (routingSheet.getNonConformity() == null
+                    || routingSheet.getNonConformity().getStatus()
+                    != com.nocountry.qualitytrack.nonconformities.enums.NonConformityStatus.OPEN
+                    || routingSheet.getNonConformity().getDisposition()
+                    != com.nocountry.qualitytrack.nonconformities.enums.NonConformityDisposition.REWORK) {
+                conflict("La ruta REWORK requiere una no conformidad OPEN con disposición REWORK.");
+            }
         }
 
         RoutingSheetStatus previousRoutingStatus = routingSheet.getStatus();
@@ -162,12 +175,16 @@ public class RoutingWorkflowService {
 
         try {
             routingSheet.release(actor, releasedAt);
-            workOrder.releaseToProduction();
+            if (productionRouting) {
+                workOrder.releaseToProduction();
+            }
         } catch (IllegalArgumentException | IllegalStateException exception) {
             conflict(exception.getMessage());
         }
 
-        workOrderRepository.save(workOrder);
+        if (productionRouting) {
+            workOrderRepository.save(workOrder);
+        }
         routingSheet = routingSheetRepository.saveAndFlush(routingSheet);
 
         traceabilityService.record(
@@ -183,26 +200,32 @@ public class RoutingWorkflowService {
                         "workOrderNumber", workOrder.getWorkOrderNumber(),
                         "revision", routingSheet.getRevision(),
                         "purpose", routingSheet.getPurpose(),
+                        "nonConformityId",
+                        routingSheet.getNonConformity() == null
+                                ? null
+                                : routingSheet.getNonConformity().getId(),
                         "operationCount", routingSheet.getOperations().size(),
                         "estimatedMinutes", routingSheet.totalEstimatedMinutes()
                 )
         );
 
-        traceabilityService.record(
-                workOrder.getJobCase(),
-                TraceabilityAggregateType.WORK_ORDER,
-                workOrder.getId(),
-                TraceabilityEventType.WORK_ORDER_RELEASED,
-                previousWorkOrderStatus.name(),
-                workOrder.getStatus().name(),
-                currentUserId,
-                metadata(
-                        "workOrderNumber", workOrder.getWorkOrderNumber(),
-                        "routingSheetId", routingSheet.getId(),
-                        "routingRevision", routingSheet.getRevision(),
-                        "routingPurpose", routingSheet.getPurpose()
-                )
-        );
+        if (productionRouting) {
+            traceabilityService.record(
+                    workOrder.getJobCase(),
+                    TraceabilityAggregateType.WORK_ORDER,
+                    workOrder.getId(),
+                    TraceabilityEventType.WORK_ORDER_RELEASED,
+                    previousWorkOrderStatus.name(),
+                    workOrder.getStatus().name(),
+                    currentUserId,
+                    metadata(
+                            "workOrderNumber", workOrder.getWorkOrderNumber(),
+                            "routingSheetId", routingSheet.getId(),
+                            "routingRevision", routingSheet.getRevision(),
+                            "routingPurpose", routingSheet.getPurpose()
+                    )
+            );
+        }
 
         return RoutingSheetResponse.from(routingSheet);
     }

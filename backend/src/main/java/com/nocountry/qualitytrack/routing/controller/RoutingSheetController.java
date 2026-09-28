@@ -136,7 +136,7 @@ public class RoutingSheetController {
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 ApiSuccessCode.ROUTING_SHEET_RELEASED,
-                "Hoja de ruta liberada y orden lista para producción.",
+                "Hoja de ruta liberada correctamente.",
                 workflowService.release(currentUserId, routingSheetId)
         ));
     }

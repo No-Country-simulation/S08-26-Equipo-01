@@ -21,6 +21,22 @@ public interface RoutingSheetRepository extends JpaRepository<RoutingSheet, Long
             RoutingPurpose purpose
     );
 
+    Optional<RoutingSheet> findByWorkOrder_IdAndPurpose(
+            Long workOrderId,
+            RoutingPurpose purpose
+    );
+
+    List<RoutingSheet> findAllByNonConformity_IdOrderByRevisionAsc(
+            Long nonConformityId
+    );
+
+    @Query("""
+            select coalesce(max(routingSheet.revision), 0)
+            from RoutingSheet routingSheet
+            where routingSheet.workOrder.id = :workOrderId
+            """)
+    Integer findMaxRevisionByWorkOrderId(@Param("workOrderId") Long workOrderId);
+
     boolean existsByWorkOrder_IdAndStatusIn(
             Long workOrderId,
             Collection<RoutingSheetStatus> statuses
@@ -30,7 +46,8 @@ public interface RoutingSheetRepository extends JpaRepository<RoutingSheet, Long
             "workOrder",
             "createdByUser",
             "approvedByUser",
-            "releasedByUser"
+            "releasedByUser",
+            "nonConformity"
     })
     List<RoutingSheet> findAllByWorkOrder_IdOrderByRevisionAsc(Long workOrderId);
 
@@ -39,7 +56,8 @@ public interface RoutingSheetRepository extends JpaRepository<RoutingSheet, Long
             "workOrder",
             "createdByUser",
             "approvedByUser",
-            "releasedByUser"
+            "releasedByUser",
+            "nonConformity"
     })
     Optional<RoutingSheet> findById(Long id);
 
@@ -60,6 +78,7 @@ public interface RoutingSheetRepository extends JpaRepository<RoutingSheet, Long
             join fetch routingSheet.createdByUser
             left join fetch routingSheet.approvedByUser
             left join fetch routingSheet.releasedByUser
+            left join fetch routingSheet.nonConformity
             where routingSheet.id = :routingSheetId
             """)
     Optional<RoutingSheet> findByIdForUpdate(

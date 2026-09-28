@@ -147,11 +147,16 @@ public class MaterialService {
         WorkOrder workOrder = workOrderRepository.findByIdForUpdate(workOrderId)
                 .orElseThrow(() -> notFound("No se encontró la orden de trabajo."));
 
-        if (workOrder.getStatus() != WorkOrderStatus.IN_PRODUCTION) {
-            conflict("El consumo real solo puede registrarse durante producción.");
-        }
-        if (workOrder.isProductionCompleted()) {
-            conflict("La producción ya terminó; no se puede registrar más consumo.");
+        boolean productionOpen =
+                workOrder.getStatus() == WorkOrderStatus.IN_PRODUCTION
+                        && !workOrder.isProductionCompleted();
+        boolean reworkOpen =
+                workOrder.getStatus() == WorkOrderStatus.REWORK_IN_PROGRESS;
+
+        if (!productionOpen && !reworkOpen) {
+            conflict(
+                    "El consumo real solo puede registrarse durante producción o retrabajo en ejecución."
+            );
         }
 
         MaterialLot lot = materialLotRepository.findByIdForUpdate(request.materialLotId())

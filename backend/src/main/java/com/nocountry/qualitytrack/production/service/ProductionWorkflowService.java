@@ -1,6 +1,9 @@
 package com.nocountry.qualitytrack.production.service;
 
 import com.nocountry.qualitytrack.machines.entity.Machine;
+import com.nocountry.qualitytrack.nonconformities.entity.NonConformity;
+import com.nocountry.qualitytrack.nonconformities.enums.NonConformityDisposition;
+import com.nocountry.qualitytrack.nonconformities.enums.NonConformityStatus;
 import com.nocountry.qualitytrack.machines.repository.MachineRepository;
 import com.nocountry.qualitytrack.production.dto.request.CancelOperationExecutionRequest;
 import com.nocountry.qualitytrack.production.dto.request.CompleteOperationExecutionRequest;
@@ -10,7 +13,10 @@ import com.nocountry.qualitytrack.production.dto.response.ProductionStatusRespon
 import com.nocountry.qualitytrack.production.entity.OperationExecution;
 import com.nocountry.qualitytrack.production.enums.OperationExecutionStatus;
 import com.nocountry.qualitytrack.production.repository.OperationExecutionRepository;
+import com.nocountry.qualitytrack.quality.entity.QualityInspection;
+import com.nocountry.qualitytrack.quality.repository.QualityInspectionRepository;
 import com.nocountry.qualitytrack.routing.entity.RoutingOperation;
+import com.nocountry.qualitytrack.routing.enums.RoutingPurpose;
 import com.nocountry.qualitytrack.routing.enums.RoutingSheetStatus;
 import com.nocountry.qualitytrack.routing.repository.RoutingOperationRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
@@ -41,6 +47,7 @@ public class ProductionWorkflowService {
     private final RoutingOperationRepository routingOperationRepository;
     private final OperationExecutionRepository executionRepository;
     private final MachineRepository machineRepository;
+    private final QualityInspectionRepository qualityInspectionRepository;
     private final TraceabilityService traceabilityService;
 
     @Transactional
@@ -91,12 +98,21 @@ public class ProductionWorkflowService {
                 executionRepository.countByRoutingOperation_Id(operationId) + 1
         );
 
-        if (workOrder.getStatus() == WorkOrderStatus.READY_FOR_PRODUCTION) {
-            try {
+        boolean productionStarted = false;
+        boolean reworkStarted = false;
+
+        try {
+            if (operation.getRoutingSheet().getPurpose() == RoutingPurpose.PRODUCTION
+                    && workOrder.getStatus() == WorkOrderStatus.READY_FOR_PRODUCTION) {
                 workOrder.startProduction(startedAt);
-            } catch (IllegalArgumentException | IllegalStateException exception) {
-                conflict(exception.getMessage());
+                productionStarted = true;
+            } else if (operation.getRoutingSheet().getPurpose() == RoutingPurpose.REWORK
+                    && workOrder.getStatus() == WorkOrderStatus.QUALITY_HOLD) {
+                workOrder.startRework();
+                reworkStarted = true;
             }
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            conflict(exception.getMessage());
         }
 
         OperationExecution execution;
@@ -117,7 +133,7 @@ public class ProductionWorkflowService {
         execution = executionRepository.saveAndFlush(execution);
         workOrderRepository.saveAndFlush(workOrder);
 
-        if (workOrder.getActualStartAt().equals(startedAt)) {
+        if (productionStarted) {
             traceabilityService.record(
                     workOrder.getJobCase(),
                     TraceabilityAggregateType.WORK_ORDER,
@@ -129,6 +145,25 @@ public class ProductionWorkflowService {
                     metadata(
                             "workOrderNumber", workOrder.getWorkOrderNumber(),
                             "routingSheetId", operation.getRoutingSheet().getId()
+                    )
+            );
+        }
+
+        if (reworkStarted) {
+            traceabilityService.record(
+                    workOrder.getJobCase(),
+                    TraceabilityAggregateType.WORK_ORDER,
+                    workOrder.getId(),
+                    TraceabilityEventType.REWORK_STARTED,
+                    WorkOrderStatus.QUALITY_HOLD.name(),
+                    WorkOrderStatus.REWORK_IN_PROGRESS.name(),
+                    currentUserId,
+                    metadata(
+                            "workOrderNumber", workOrder.getWorkOrderNumber(),
+                            "routingSheetId", operation.getRoutingSheet().getId(),
+                            "routingRevision", operation.getRoutingSheet().getRevision(),
+                            "nonConformityId",
+                            operation.getRoutingSheet().getNonConformity().getId()
                     )
             );
         }
@@ -165,7 +200,7 @@ public class ProductionWorkflowService {
         WorkOrder workOrder = locked.workOrder();
         OperationExecution execution = locked.execution();
 
-        requireProductionOpen(workOrder);
+        requireExecutionOpen(workOrder, execution.getRoutingOperation());
 
         Machine machine = lockAssignedMachine(execution);
         Instant finishedAt = Instant.now();
@@ -188,18 +223,43 @@ public class ProductionWorkflowService {
 
         execution = executionRepository.saveAndFlush(execution);
 
-        boolean productionCompleted = allOperationsCompleted(
+        boolean routingCompleted = allOperationsCompleted(
                 execution.getRoutingOperation()
         );
+        boolean productionCompleted = false;
+        boolean reworkCompleted = false;
+        QualityInspection reinspection = null;
 
-        if (productionCompleted) {
+        if (routingCompleted) {
             try {
-                workOrder.markProductionCompleted(finishedAt);
+                if (execution.getRoutingOperation()
+                        .getRoutingSheet()
+                        .getPurpose() == RoutingPurpose.PRODUCTION) {
+                    workOrder.markProductionCompleted(finishedAt);
+                    productionCompleted = true;
+                } else {
+                    NonConformity nonConformity = execution
+                            .getRoutingOperation()
+                            .getRoutingSheet()
+                            .getNonConformity();
+
+                    requireOpenReworkNonConformity(nonConformity);
+
+                    reinspection = QualityInspection.createReinspection(
+                            workOrder,
+                            nonConformity
+                    );
+                    workOrder.sendReworkToQuality();
+                    reworkCompleted = true;
+                }
             } catch (IllegalArgumentException | IllegalStateException exception) {
                 conflict(exception.getMessage());
             }
         }
 
+        if (reinspection != null) {
+            reinspection = qualityInspectionRepository.saveAndFlush(reinspection);
+        }
         workOrderRepository.saveAndFlush(workOrder);
 
         traceabilityService.record(
@@ -238,6 +298,45 @@ public class ProductionWorkflowService {
             );
         }
 
+        if (reworkCompleted) {
+            NonConformity nonConformity = execution
+                    .getRoutingOperation()
+                    .getRoutingSheet()
+                    .getNonConformity();
+
+            traceabilityService.record(
+                    workOrder.getJobCase(),
+                    TraceabilityAggregateType.WORK_ORDER,
+                    workOrder.getId(),
+                    TraceabilityEventType.REWORK_COMPLETED,
+                    WorkOrderStatus.REWORK_IN_PROGRESS.name(),
+                    WorkOrderStatus.QUALITY_PENDING.name(),
+                    currentUserId,
+                    metadata(
+                            "routingSheetId",
+                            execution.getRoutingOperation().getRoutingSheet().getId(),
+                            "routingRevision",
+                            execution.getRoutingOperation().getRoutingSheet().getRevision(),
+                            "nonConformityId", nonConformity.getId(),
+                            "qualityInspectionId", reinspection.getId()
+                    )
+            );
+
+            traceabilityService.record(
+                    workOrder.getJobCase(),
+                    TraceabilityAggregateType.QUALITY_INSPECTION,
+                    reinspection.getId(),
+                    TraceabilityEventType.QUALITY_INSPECTION_CREATED,
+                    null,
+                    com.nocountry.qualitytrack.quality.enums.QualityInspectionStatus.PENDING.name(),
+                    currentUserId,
+                    metadata(
+                            "workOrderId", workOrder.getId(),
+                            "reworkNonConformityId", nonConformity.getId()
+                    )
+            );
+        }
+
         return OperationExecutionResponse.from(execution);
     }
 
@@ -252,7 +351,7 @@ public class ProductionWorkflowService {
         WorkOrder workOrder = locked.workOrder();
         OperationExecution execution = locked.execution();
 
-        requireProductionOpen(workOrder);
+        requireExecutionOpen(workOrder, execution.getRoutingOperation());
 
         Machine machine = lockAssignedMachine(execution);
         OperationExecutionStatus previousStatus = execution.getStatus();
@@ -353,21 +452,56 @@ public class ProductionWorkflowService {
         if (operation.getRoutingSheet().getStatus() != RoutingSheetStatus.RELEASED) {
             conflict("Solo pueden ejecutarse operaciones de una hoja de ruta RELEASED.");
         }
-        if (workOrder.getStatus() != WorkOrderStatus.READY_FOR_PRODUCTION
-                && workOrder.getStatus() != WorkOrderStatus.IN_PRODUCTION) {
-            conflict("La orden no está disponible para ejecución de producción.");
+
+        if (operation.getRoutingSheet().getPurpose() == RoutingPurpose.PRODUCTION) {
+            if (workOrder.getStatus() != WorkOrderStatus.READY_FOR_PRODUCTION
+                    && workOrder.getStatus() != WorkOrderStatus.IN_PRODUCTION) {
+                conflict("La orden no está disponible para ejecución de producción.");
+            }
+            if (workOrder.isProductionCompleted()) {
+                conflict("La producción de la orden ya fue completada.");
+            }
+            return;
         }
-        if (workOrder.isProductionCompleted()) {
-            conflict("La producción de la orden ya fue completada.");
+
+        if (workOrder.getStatus() != WorkOrderStatus.QUALITY_HOLD
+                && workOrder.getStatus() != WorkOrderStatus.REWORK_IN_PROGRESS) {
+            conflict("La orden no está disponible para ejecución de retrabajo.");
         }
+
+        requireOpenReworkNonConformity(
+                operation.getRoutingSheet().getNonConformity()
+        );
     }
 
-    private void requireProductionOpen(WorkOrder workOrder) {
-        if (workOrder.getStatus() != WorkOrderStatus.IN_PRODUCTION) {
-            conflict("La orden debe estar IN_PRODUCTION para modificar una ejecución.");
+    private void requireExecutionOpen(
+            WorkOrder workOrder,
+            RoutingOperation operation
+    ) {
+        if (operation.getRoutingSheet().getPurpose() == RoutingPurpose.PRODUCTION) {
+            if (workOrder.getStatus() != WorkOrderStatus.IN_PRODUCTION) {
+                conflict("La orden debe estar IN_PRODUCTION para modificar una ejecución.");
+            }
+            if (workOrder.isProductionCompleted()) {
+                conflict("La producción de la orden ya fue completada.");
+            }
+            return;
         }
-        if (workOrder.isProductionCompleted()) {
-            conflict("La producción de la orden ya fue completada.");
+
+        if (workOrder.getStatus() != WorkOrderStatus.REWORK_IN_PROGRESS) {
+            conflict("La orden debe estar REWORK_IN_PROGRESS para modificar una ejecución de retrabajo.");
+        }
+
+        requireOpenReworkNonConformity(
+                operation.getRoutingSheet().getNonConformity()
+        );
+    }
+
+    private void requireOpenReworkNonConformity(NonConformity nonConformity) {
+        if (nonConformity == null
+                || nonConformity.getStatus() != NonConformityStatus.OPEN
+                || nonConformity.getDisposition() != NonConformityDisposition.REWORK) {
+            conflict("El retrabajo requiere una no conformidad OPEN con disposición REWORK.");
         }
     }
 

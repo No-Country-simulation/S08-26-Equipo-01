@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
 @Documented
 @Tag(
         name = "10 · Producción",
-        description = "Ejecución real de las operaciones definidas en un RoutingSheet RELEASED. Registra operador, máquina, tiempos y cantidades sin mezclar ejecución con planeación ni aprobación de Calidad."
+        description = "Ejecución real de operaciones definidas en RoutingSheet RELEASED, tanto PRODUCTION como REWORK. Registra operador, máquina, tiempos y cantidades sin mezclar ejecución con planeación ni aprobación de Calidad."
 )
 public @interface ProductionApiDocs {
 }

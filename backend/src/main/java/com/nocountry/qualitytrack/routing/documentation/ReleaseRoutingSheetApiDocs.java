@@ -17,8 +17,8 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Documented
 @Operation(
-        summary = "Liberar a producción",
-        description = "Libera la ruta PRODUCTION aprobada. En una sola transacción cambia RoutingSheet APPROVED a RELEASED y WorkOrder CREATED a READY_FOR_PRODUCTION. Requiere planificación completa, documentos fijados y operaciones."
+        summary = "Liberar hoja de ruta",
+        description = "Libera una ruta APPROVED. Para PRODUCTION cambia RoutingSheet a RELEASED y WorkOrder CREATED a READY_FOR_PRODUCTION en la misma transacción. Para REWORK libera la nueva revisión ligada a una NC OPEN con disposición REWORK y mantiene la WorkOrder en QUALITY_HOLD hasta que inicie la primera ejecución. Requiere documentos fijados y operaciones."
 )
 @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Operación completada correctamente"),

@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
 @Documented
 @Tag(
         name = "09 · Hoja de ruta",
-        description = "Diseño y liberación del plan de fabricación de una WorkOrder. Routing define qué debe hacerse y en qué orden; máquina, operador y tiempos reales pertenecen a OperationExecution."
+        description = "Diseño y liberación de rutas PRODUCTION y REWORK de una WorkOrder. Routing define qué debe hacerse y en qué orden; máquina, operador y tiempos reales pertenecen a OperationExecution. Las rutas REWORK son revisiones nuevas ligadas a una no conformidad."
 )
 public @interface RoutingApiDocs {
 }

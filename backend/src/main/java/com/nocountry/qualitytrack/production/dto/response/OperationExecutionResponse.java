@@ -3,6 +3,7 @@ package com.nocountry.qualitytrack.production.dto.response;
 import com.nocountry.qualitytrack.machines.entity.Machine;
 import com.nocountry.qualitytrack.production.entity.OperationExecution;
 import com.nocountry.qualitytrack.production.enums.OperationExecutionStatus;
+import com.nocountry.qualitytrack.routing.enums.RoutingPurpose;
 import com.nocountry.qualitytrack.users.entity.User;
 import com.nocountry.qualitytrack.workorders.enums.WorkOrderStatus;
 
@@ -15,6 +16,7 @@ public record OperationExecutionResponse(
         WorkOrderStatus workOrderStatus,
         Long routingSheetId,
         Integer routingRevision,
+        RoutingPurpose routingPurpose,
         Long routingOperationId,
         Integer sequenceNumber,
         String operationCode,
@@ -49,6 +51,7 @@ public record OperationExecutionResponse(
                 workOrder.getStatus(),
                 routingSheet.getId(),
                 routingSheet.getRevision(),
+                routingSheet.getPurpose(),
                 operation.getId(),
                 operation.getSequenceNumber(),
                 operation.getCode(),

@@ -2,11 +2,14 @@ package com.nocountry.qualitytrack.production.service;
 
 import com.nocountry.qualitytrack.machines.entity.Machine;
 import com.nocountry.qualitytrack.machines.repository.MachineRepository;
+import com.nocountry.qualitytrack.nonconformities.entity.NonConformity;
 import com.nocountry.qualitytrack.production.dto.request.CompleteOperationExecutionRequest;
 import com.nocountry.qualitytrack.production.dto.request.StartOperationExecutionRequest;
 import com.nocountry.qualitytrack.production.entity.OperationExecution;
 import com.nocountry.qualitytrack.production.enums.OperationExecutionStatus;
 import com.nocountry.qualitytrack.production.repository.OperationExecutionRepository;
+import com.nocountry.qualitytrack.quality.entity.QualityInspection;
+import com.nocountry.qualitytrack.quality.repository.QualityInspectionRepository;
 import com.nocountry.qualitytrack.quotations.entity.Quotation;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.routing.entity.RoutingOperation;
@@ -49,6 +52,7 @@ class ProductionWorkflowServiceTest {
     @Mock private RoutingOperationRepository routingOperationRepository;
     @Mock private OperationExecutionRepository executionRepository;
     @Mock private MachineRepository machineRepository;
+    @Mock private QualityInspectionRepository qualityInspectionRepository;
     @Mock private TraceabilityService traceabilityService;
     @Mock private JobCase jobCase;
     @Mock private Quotation quotation;
@@ -68,6 +72,7 @@ class ProductionWorkflowServiceTest {
                 routingOperationRepository,
                 executionRepository,
                 machineRepository,
+                qualityInspectionRepository,
                 traceabilityService
         );
 
@@ -141,6 +146,14 @@ class ProductionWorkflowServiceTest {
         stubLockedOperation(secondOperation);
         when(routingOperationRepository.findAllByRoutingSheet_IdOrderBySequenceNumberAsc(20L))
                 .thenReturn(List.of(firstOperation, secondOperation));
+        when(executionRepository.existsByRoutingOperation_IdAndStatus(
+                102L,
+                OperationExecutionStatus.IN_PROGRESS
+        )).thenReturn(false);
+        when(executionRepository.existsByRoutingOperation_IdAndStatus(
+                102L,
+                OperationExecutionStatus.COMPLETED
+        )).thenReturn(false);
         when(executionRepository.existsByRoutingOperation_IdAndStatus(
                 101L,
                 OperationExecutionStatus.COMPLETED
@@ -218,6 +231,148 @@ class ProductionWorkflowServiceTest {
         assertEquals(WorkOrderStatus.IN_PRODUCTION, workOrder.getStatus());
         assertEquals(true, workOrder.isProductionCompleted());
         assertNotNull(workOrder.getActualEndAt());
+    }
+
+    @Test
+    void firstReworkExecutionMovesOrderToReworkInProgress() {
+        NonConformity nonConformity = rejectedNonConformity();
+        RoutingSheet reworkRouting = RoutingSheet.createRework(
+                workOrder,
+                2,
+                nonConformity,
+                actor
+        );
+        RoutingOperation reworkOperation = reworkRouting.addOperation(
+                10,
+                "RW-TURN",
+                "Corrección de diámetro",
+                "Retrabajar dimensión fuera de tolerancia.",
+                45
+        );
+        ReflectionTestUtils.setField(reworkRouting, "id", 30L);
+        ReflectionTestUtils.setField(reworkOperation, "id", 201L);
+        reworkRouting.approve(actor, Instant.parse("2026-09-28T18:00:00Z"));
+        reworkRouting.release(actor, Instant.parse("2026-09-28T18:10:00Z"));
+
+        when(accessPolicy.requireProductionActor(10L)).thenReturn(actor);
+        when(routingOperationRepository.findWorkOrderIdById(201L))
+                .thenReturn(Optional.of(7L));
+        when(workOrderRepository.findByIdForUpdate(7L))
+                .thenReturn(Optional.of(workOrder));
+        when(routingOperationRepository.findByIdForUpdate(201L))
+                .thenReturn(Optional.of(reworkOperation));
+        when(routingOperationRepository.findAllByRoutingSheet_IdOrderBySequenceNumberAsc(30L))
+                .thenReturn(List.of(reworkOperation));
+        when(executionRepository.countByRoutingOperation_Id(201L)).thenReturn(0L);
+        when(executionRepository.saveAndFlush(any(OperationExecution.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.start(
+                10L,
+                201L,
+                new StartOperationExecutionRequest(null, null, "Inicio retrabajo.")
+        );
+
+        assertEquals(OperationExecutionStatus.IN_PROGRESS, response.status());
+        assertEquals(WorkOrderStatus.REWORK_IN_PROGRESS, workOrder.getStatus());
+        verify(traceabilityService, times(2)).record(
+                any(), any(), any(), any(), any(), any(), any(), any()
+        );
+    }
+
+    @Test
+    void completingLastReworkOperationCreatesPendingReinspection() {
+        NonConformity nonConformity = rejectedNonConformity();
+        RoutingSheet reworkRouting = RoutingSheet.createRework(
+                workOrder,
+                2,
+                nonConformity,
+                actor
+        );
+        RoutingOperation reworkOperation = reworkRouting.addOperation(
+                10,
+                "RW-TURN",
+                "Corrección de diámetro",
+                "Retrabajar dimensión fuera de tolerancia.",
+                45
+        );
+        ReflectionTestUtils.setField(reworkRouting, "id", 30L);
+        ReflectionTestUtils.setField(reworkOperation, "id", 201L);
+        reworkRouting.approve(actor, Instant.parse("2026-09-28T18:00:00Z"));
+        reworkRouting.release(actor, Instant.parse("2026-09-28T18:10:00Z"));
+        workOrder.startRework();
+
+        OperationExecution execution = OperationExecution.start(
+                reworkOperation,
+                actor,
+                null,
+                1,
+                null,
+                Instant.parse("2026-09-28T18:15:00Z")
+        );
+        ReflectionTestUtils.setField(execution, "id", 601L);
+
+        when(accessPolicy.requireProductionActor(10L)).thenReturn(actor);
+        when(executionRepository.findWorkOrderIdById(601L))
+                .thenReturn(Optional.of(7L));
+        when(workOrderRepository.findByIdForUpdate(7L))
+                .thenReturn(Optional.of(workOrder));
+        when(executionRepository.findByIdForUpdate(601L))
+                .thenReturn(Optional.of(execution));
+        when(executionRepository.saveAndFlush(execution)).thenReturn(execution);
+        when(routingOperationRepository.findAllByRoutingSheet_IdOrderBySequenceNumberAsc(30L))
+                .thenReturn(List.of(reworkOperation));
+        when(executionRepository.existsByRoutingOperation_IdAndStatus(
+                201L,
+                OperationExecutionStatus.COMPLETED
+        )).thenReturn(true);
+        when(qualityInspectionRepository.saveAndFlush(any(QualityInspection.class)))
+                .thenAnswer(invocation -> {
+                    QualityInspection inspection = invocation.getArgument(0);
+                    ReflectionTestUtils.setField(inspection, "id", 700L);
+                    return inspection;
+                });
+
+        var response = service.complete(
+                10L,
+                601L,
+                new CompleteOperationExecutionRequest(1, 1, 0, "Retrabajo terminado.")
+        );
+
+        assertEquals(OperationExecutionStatus.COMPLETED, response.status());
+        assertEquals(WorkOrderStatus.QUALITY_PENDING, workOrder.getStatus());
+        verify(qualityInspectionRepository).saveAndFlush(any(QualityInspection.class));
+        verify(traceabilityService, times(3)).record(
+                any(), any(), any(), any(), any(), any(), any(), any()
+        );
+    }
+
+    private NonConformity rejectedNonConformity() {
+        workOrder.startProduction(Instant.parse("2026-09-28T08:00:00Z"));
+        workOrder.markProductionCompleted(Instant.parse("2026-09-28T16:00:00Z"));
+
+        QualityInspection inspection = QualityInspection.createPending(workOrder);
+        ReflectionTestUtils.setField(inspection, "id", 300L);
+        workOrder.sendToQuality();
+        inspection.start(actor, Instant.parse("2026-09-28T17:00:00Z"));
+        inspection.reject(Instant.parse("2026-09-28T17:30:00Z"));
+        workOrder.holdForQuality();
+
+        NonConformity nonConformity = NonConformity.open(
+                "NC-0001",
+                workOrder,
+                inspection,
+                actor,
+                Instant.parse("2026-09-28T17:30:00Z")
+        );
+        ReflectionTestUtils.setField(nonConformity, "id", 400L);
+        nonConformity.updateDetails(
+                1,
+                "MAJOR",
+                "Diámetro fuera de tolerancia."
+        );
+        nonConformity.selectRework();
+        return nonConformity;
     }
 
     private void stubLockedOperation(RoutingOperation operation) {

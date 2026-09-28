@@ -1,5 +1,8 @@
 package com.nocountry.qualitytrack.routing.entity;
 
+import com.nocountry.qualitytrack.nonconformities.entity.NonConformity;
+import com.nocountry.qualitytrack.nonconformities.enums.NonConformityDisposition;
+import com.nocountry.qualitytrack.nonconformities.enums.NonConformityStatus;
 import com.nocountry.qualitytrack.routing.enums.RoutingPurpose;
 import com.nocountry.qualitytrack.routing.enums.RoutingSheetStatus;
 import com.nocountry.qualitytrack.users.entity.User;
@@ -56,6 +59,10 @@ public class RoutingSheet {
     @Column(nullable = false)
     private RoutingSheetStatus status;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "non_conformity_id")
+    private NonConformity nonConformity;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "created_by_user_id", nullable = false)
     private User createdByUser;
@@ -94,14 +101,16 @@ public class RoutingSheet {
             WorkOrder workOrder,
             Integer revision,
             RoutingPurpose purpose,
+            NonConformity nonConformity,
             User createdByUser
     ) {
         this.workOrder = Objects.requireNonNull(workOrder);
-        requireWorkOrderCreated();
         this.revision = requirePositive(revision, "La revisión de routing debe ser mayor a cero.");
         this.purpose = Objects.requireNonNull(purpose);
+        this.nonConformity = nonConformity;
         this.createdByUser = Objects.requireNonNull(createdByUser);
         this.status = RoutingSheetStatus.DRAFT;
+        requireWorkOrderAllowsRouting();
     }
 
     public static RoutingSheet createProduction(
@@ -112,6 +121,22 @@ public class RoutingSheet {
                 workOrder,
                 1,
                 RoutingPurpose.PRODUCTION,
+                null,
+                createdByUser
+        );
+    }
+
+    public static RoutingSheet createRework(
+            WorkOrder workOrder,
+            Integer revision,
+            NonConformity nonConformity,
+            User createdByUser
+    ) {
+        return new RoutingSheet(
+                workOrder,
+                revision,
+                RoutingPurpose.REWORK,
+                Objects.requireNonNull(nonConformity),
                 createdByUser
         );
     }
@@ -175,7 +200,7 @@ public class RoutingSheet {
     }
 
     public void approve(User actor, Instant approvedAt) {
-        requireWorkOrderCreated();
+        requireWorkOrderAllowsRouting();
         requireStatus(
                 RoutingSheetStatus.DRAFT,
                 "Solo una hoja de ruta DRAFT puede aprobarse."
@@ -191,7 +216,7 @@ public class RoutingSheet {
     }
 
     public void reopen() {
-        requireWorkOrderCreated();
+        requireWorkOrderAllowsRouting();
         requireStatus(
                 RoutingSheetStatus.APPROVED,
                 "Solo una hoja de ruta APPROVED puede reabrirse."
@@ -203,7 +228,7 @@ public class RoutingSheet {
     }
 
     public void release(User actor, Instant releasedAt) {
-        requireWorkOrderCreated();
+        requireWorkOrderAllowsRouting();
         requireStatus(
                 RoutingSheetStatus.APPROVED,
                 "Solo una hoja de ruta APPROVED puede liberarse."
@@ -229,17 +254,50 @@ public class RoutingSheet {
     }
 
     private void requireEditable() {
-        requireWorkOrderCreated();
+        requireWorkOrderAllowsRouting();
         requireStatus(
                 RoutingSheetStatus.DRAFT,
                 "Solo una hoja de ruta DRAFT puede modificarse."
         );
     }
 
-    private void requireWorkOrderCreated() {
-        if (workOrder.getStatus() != WorkOrderStatus.CREATED) {
+    private void requireWorkOrderAllowsRouting() {
+        if (purpose == RoutingPurpose.PRODUCTION) {
+            if (workOrder.getStatus() != WorkOrderStatus.CREATED) {
+                throw new IllegalStateException(
+                        "La hoja de ruta de producción solo puede prepararse mientras la orden esté en CREATED."
+                );
+            }
+            if (nonConformity != null) {
+                throw new IllegalStateException(
+                        "Una ruta PRODUCTION no puede estar ligada a una no conformidad."
+                );
+            }
+            return;
+        }
+
+        if (workOrder.getStatus() != WorkOrderStatus.QUALITY_HOLD) {
             throw new IllegalStateException(
-                    "La hoja de ruta solo puede prepararse mientras la orden esté en CREATED."
+                    "Una ruta REWORK solo puede prepararse mientras la orden esté en QUALITY_HOLD."
+            );
+        }
+        if (nonConformity == null
+                || nonConformity.getStatus() != NonConformityStatus.OPEN
+                || nonConformity.getDisposition() != NonConformityDisposition.REWORK) {
+            throw new IllegalStateException(
+                    "Una ruta REWORK requiere una no conformidad OPEN con disposición REWORK."
+            );
+        }
+
+        WorkOrder ncWorkOrder = nonConformity.getWorkOrder();
+        if (ncWorkOrder != workOrder
+                && (
+                ncWorkOrder.getId() == null
+                        || workOrder.getId() == null
+                        || !ncWorkOrder.getId().equals(workOrder.getId())
+        )) {
+            throw new IllegalArgumentException(
+                    "La no conformidad no pertenece a la orden de trabajo del routing."
             );
         }
     }
