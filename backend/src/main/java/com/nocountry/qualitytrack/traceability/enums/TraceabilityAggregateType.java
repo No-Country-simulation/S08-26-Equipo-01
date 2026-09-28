@@ -7,5 +7,6 @@ public enum TraceabilityAggregateType {
     DOCUMENT_VERSION,
     QUOTATION,
     WORK_ORDER,
-    ROUTING_SHEET
+    ROUTING_SHEET,
+    OPERATION_EXECUTION
 }

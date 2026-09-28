@@ -68,6 +68,12 @@ public class WorkOrder {
     @Column(name = "agreed_delivery_date", nullable = false)
     private LocalDate agreedDeliveryDate;
 
+    @Column(name = "actual_start_at")
+    private Instant actualStartAt;
+
+    @Column(name = "actual_end_at")
+    private Instant actualEndAt;
+
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "created_by_user_id", nullable = false)
     private User createdByUser;
@@ -174,6 +180,47 @@ public class WorkOrder {
             );
         }
         this.status = WorkOrderStatus.READY_FOR_PRODUCTION;
+    }
+
+    public void startProduction(Instant startedAt) {
+        if (status != WorkOrderStatus.READY_FOR_PRODUCTION) {
+            throw new IllegalStateException(
+                    "Solo una orden READY_FOR_PRODUCTION puede iniciar producción."
+            );
+        }
+        if (actualStartAt != null) {
+            throw new IllegalStateException("La producción de la orden ya fue iniciada.");
+        }
+
+        this.actualStartAt = Objects.requireNonNull(startedAt);
+        this.status = WorkOrderStatus.IN_PRODUCTION;
+    }
+
+    public void markProductionCompleted(Instant completedAt) {
+        if (status != WorkOrderStatus.IN_PRODUCTION) {
+            throw new IllegalStateException(
+                    "Solo una orden IN_PRODUCTION puede marcar su producción como completa."
+            );
+        }
+        if (actualStartAt == null) {
+            throw new IllegalStateException("La orden no tiene un inicio real de producción.");
+        }
+        if (actualEndAt != null) {
+            throw new IllegalStateException("La producción de la orden ya fue completada.");
+        }
+
+        Instant nextCompletedAt = Objects.requireNonNull(completedAt);
+        if (nextCompletedAt.isBefore(actualStartAt)) {
+            throw new IllegalArgumentException(
+                    "El fin real de producción no puede ser anterior al inicio."
+            );
+        }
+
+        this.actualEndAt = nextCompletedAt;
+    }
+
+    public boolean isProductionCompleted() {
+        return actualEndAt != null;
     }
 
     public void cancel(User actor, String reason, Instant cancelledAt) {
