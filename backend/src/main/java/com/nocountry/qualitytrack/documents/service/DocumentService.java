@@ -33,6 +33,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Instant;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -195,6 +196,49 @@ public class DocumentService {
                 .stream()
                 .map(DocumentVersionResponse::from)
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, List<DocumentVersionResponse>> listVersionsByDocumentIds(
+            Long currentUserId,
+            Long caseId,
+            List<Long> documentIds
+    ) {
+        accessService.requireInternalReader(currentUserId);
+
+        if (documentIds == null || documentIds.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> distinctDocumentIds = documentIds.stream()
+                .distinct()
+                .toList();
+
+        Map<Long, List<DocumentVersionResponse>> versionsByDocumentId =
+                documentVersionRepository
+                        .findAllActiveByCaseIdAndDocumentIds(
+                                caseId,
+                                DocumentStatus.ACTIVE,
+                                distinctDocumentIds
+                        )
+                        .stream()
+                        .collect(Collectors.groupingBy(
+                                version -> version.getDocument().getId(),
+                                LinkedHashMap::new,
+                                Collectors.mapping(
+                                        DocumentVersionResponse::from,
+                                        Collectors.toUnmodifiableList()
+                                )
+                        ));
+
+        if (versionsByDocumentId.size() != distinctDocumentIds.size()) {
+            throw new BusinessException(
+                    ApiErrorCode.DATA_CONFLICT,
+                    "Uno o más documentos del expediente no tienen versiones activas disponibles."
+            );
+        }
+
+        return versionsByDocumentId;
     }
 
     @Transactional(readOnly = true)

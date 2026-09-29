@@ -4,6 +4,7 @@ import com.nocountry.qualitytrack.auth.security.CurrentUserId;
 import com.nocountry.qualitytrack.shared.response.ApiResponse;
 import com.nocountry.qualitytrack.shared.response.ApiSuccessCode;
 import com.nocountry.qualitytrack.workorders.documentation.CancelWorkOrderApiDocs;
+import com.nocountry.qualitytrack.workorders.documentation.GetWorkOrder360ApiDocs;
 import com.nocountry.qualitytrack.workorders.documentation.GetWorkOrderApiDocs;
 import com.nocountry.qualitytrack.workorders.documentation.PinWorkOrderDocumentApiDocs;
 import com.nocountry.qualitytrack.workorders.documentation.ListWorkOrdersApiDocs;
@@ -12,9 +13,11 @@ import com.nocountry.qualitytrack.workorders.documentation.UpdateWorkOrderPlanni
 import com.nocountry.qualitytrack.workorders.dto.request.CancelWorkOrderRequest;
 import com.nocountry.qualitytrack.workorders.dto.request.PinWorkOrderDocumentRequest;
 import com.nocountry.qualitytrack.workorders.dto.request.UpdateWorkOrderPlanningRequest;
+import com.nocountry.qualitytrack.workorders.dto.response.WorkOrder360Response;
 import com.nocountry.qualitytrack.workorders.dto.response.WorkOrderDetailResponse;
 import com.nocountry.qualitytrack.workorders.dto.response.WorkOrderDocumentResponse;
 import com.nocountry.qualitytrack.workorders.dto.response.WorkOrderResponse;
+import com.nocountry.qualitytrack.workorders.service.WorkOrder360Service;
 import com.nocountry.qualitytrack.workorders.service.WorkOrderDocumentService;
 import com.nocountry.qualitytrack.workorders.service.WorkOrderService;
 import com.nocountry.qualitytrack.workorders.service.WorkOrderWorkflowService;
@@ -40,6 +43,7 @@ public class WorkOrderController {
     private final WorkOrderService workOrderService;
     private final WorkOrderWorkflowService workflowService;
     private final WorkOrderDocumentService documentService;
+    private final WorkOrder360Service workOrder360Service;
 
     @ListWorkOrdersApiDocs
     @GetMapping
@@ -63,6 +67,19 @@ public class WorkOrderController {
                 ApiSuccessCode.WORK_ORDER_RETRIEVED,
                 "Orden de trabajo consultada correctamente.",
                 workOrderService.get(currentUserId, workOrderId)
+        ));
+    }
+
+    @GetWorkOrder360ApiDocs
+    @GetMapping("/{workOrderId}/360")
+    public ResponseEntity<ApiResponse<WorkOrder360Response>> get360(
+            @CurrentUserId Long currentUserId,
+            @PathVariable Long workOrderId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                ApiSuccessCode.WORK_ORDER_360_RETRIEVED,
+                "Expediente 360 consultado correctamente.",
+                workOrder360Service.get(currentUserId, workOrderId)
         ));
     }
 

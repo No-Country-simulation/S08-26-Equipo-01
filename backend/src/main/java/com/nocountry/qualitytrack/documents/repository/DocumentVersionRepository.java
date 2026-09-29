@@ -22,6 +22,21 @@ public interface DocumentVersionRepository extends JpaRepository<DocumentVersion
     @EntityGraph(attributePaths = {"uploadedBy"})
     List<DocumentVersion> findAllByDocument_IdOrderByVersionAsc(Long documentId);
 
+    @EntityGraph(attributePaths = {"uploadedBy", "document"})
+    @Query("""
+            select v
+            from DocumentVersion v
+            where v.document.jobCase.id = :caseId
+              and v.document.status = :status
+              and v.document.id in :documentIds
+            order by v.document.id asc, v.version asc
+            """)
+    List<DocumentVersion> findAllActiveByCaseIdAndDocumentIds(
+            @Param("caseId") Long caseId,
+            @Param("status") DocumentStatus status,
+            @Param("documentIds") List<Long> documentIds
+    );
+
     @Query("""
             select v
             from DocumentVersion v

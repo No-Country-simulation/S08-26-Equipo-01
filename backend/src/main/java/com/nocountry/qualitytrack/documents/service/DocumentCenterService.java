@@ -21,6 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -78,19 +79,46 @@ public class DocumentCenterService {
                         Function.identity()
                 ));
 
+        Map<Long, List<WorkOrderDocument>> workOrderReferencesByDocument =
+                workOrderDocumentRepository.findAllByDocumentIds(documentIds)
+                        .stream()
+                        .collect(Collectors.groupingBy(
+                                reference -> reference.getDocument().getId(),
+                                LinkedHashMap::new,
+                                Collectors.toList()
+                        ));
+
+        Map<Long, List<MaterialLot>> materialReferencesByDocument =
+                materialLotRepository.findAllByCertificateDocumentIds(documentIds)
+                        .stream()
+                        .collect(Collectors.groupingBy(
+                                reference -> reference.getCertificateDocumentVersion()
+                                        .getDocument()
+                                        .getId(),
+                                LinkedHashMap::new,
+                                Collectors.toList()
+                        ));
+
+        Map<Long, List<Delivery>> deliveryReferencesByDocument =
+                deliveryRepository.findAllByEvidenceDocumentIds(documentIds)
+                        .stream()
+                        .collect(Collectors.groupingBy(
+                                reference -> reference.getEvidenceDocumentVersion()
+                                        .getDocument()
+                                        .getId(),
+                                LinkedHashMap::new,
+                                Collectors.toList()
+                        ));
+
         List<DocumentCenterResponse> response = new ArrayList<>();
 
         for (Document document : documents) {
-            List<WorkOrderDocument> workOrderReferences = workOrderDocumentRepository
-                    .findAllByDocument_IdOrderByWorkOrder_IdAsc(document.getId());
-            List<MaterialLot> materialReferences = materialLotRepository
-                    .findAllByCertificateDocumentVersion_Document_IdOrderByIdAsc(
-                            document.getId()
-                    );
-            List<Delivery> deliveryReferences = deliveryRepository
-                    .findAllByEvidenceDocumentVersion_Document_IdOrderByIdAsc(
-                            document.getId()
-                    );
+            List<WorkOrderDocument> workOrderReferences =
+                    workOrderReferencesByDocument.getOrDefault(document.getId(), List.of());
+            List<MaterialLot> materialReferences =
+                    materialReferencesByDocument.getOrDefault(document.getId(), List.of());
+            List<Delivery> deliveryReferences =
+                    deliveryReferencesByDocument.getOrDefault(document.getId(), List.of());
 
             List<Long> workOrderIds = workOrderReferences.stream()
                     .map(reference -> reference.getWorkOrder().getId())

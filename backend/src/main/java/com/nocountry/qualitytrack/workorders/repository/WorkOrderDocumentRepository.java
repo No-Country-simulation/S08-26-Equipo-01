@@ -21,6 +21,19 @@ public interface WorkOrderDocumentRepository extends JpaRepository<WorkOrderDocu
     })
     List<WorkOrderDocument> findAllByDocument_IdOrderByWorkOrder_IdAsc(Long documentId);
 
+    @Query("""
+            select reference
+            from WorkOrderDocument reference
+            join fetch reference.workOrder
+            join fetch reference.document
+            join fetch reference.documentVersion
+            where reference.document.id in :documentIds
+            order by reference.document.id asc, reference.workOrder.id asc
+            """)
+    List<WorkOrderDocument> findAllByDocumentIds(
+            @Param("documentIds") List<Long> documentIds
+    );
+
     @EntityGraph(attributePaths = {
             "document",
             "documentVersion",

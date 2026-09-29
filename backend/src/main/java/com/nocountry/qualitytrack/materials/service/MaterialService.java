@@ -35,6 +35,8 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -125,6 +127,51 @@ public class MaterialService {
         }
 
         return MaterialLotResponse.from(materialLotRepository.saveAndFlush(lot));
+    }
+
+    @Transactional(readOnly = true)
+    public MaterialLotResponse getLot(Long currentUserId, Long lotId) {
+        accessPolicy.requireInternalReader(currentUserId);
+
+        return materialLotRepository.findById(lotId)
+                .map(MaterialLotResponse::from)
+                .orElseThrow(() -> notFound("No se encontró el lote de material."));
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, MaterialLotResponse> getLotsByIds(
+            Long currentUserId,
+            List<Long> lotIds
+    ) {
+        accessPolicy.requireInternalReader(currentUserId);
+
+        if (lotIds == null || lotIds.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> distinctLotIds = lotIds.stream()
+                .distinct()
+                .toList();
+
+        Map<Long, MaterialLotResponse> lotsById = materialLotRepository
+                .findAllByIdIn(distinctLotIds)
+                .stream()
+                .map(MaterialLotResponse::from)
+                .collect(Collectors.toMap(
+                        MaterialLotResponse::id,
+                        Function.identity(),
+                        (first, ignored) -> first,
+                        LinkedHashMap::new
+                ));
+
+        if (lotsById.size() != distinctLotIds.size()) {
+            throw new BusinessException(
+                    ApiErrorCode.DATA_CONFLICT,
+                    "Uno o más consumos de la orden apuntan a lotes inexistentes."
+            );
+        }
+
+        return lotsById;
     }
 
     @Transactional(readOnly = true)

@@ -86,6 +86,18 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
     })
     List<Delivery> findAllByEvidenceDocumentVersion_Document_IdOrderByIdAsc(Long documentId);
 
+    @Query("""
+            select delivery
+            from Delivery delivery
+            join fetch delivery.evidenceDocumentVersion version
+            join fetch version.document document
+            where document.id in :documentIds
+            order by document.id asc, delivery.id asc
+            """)
+    List<Delivery> findAllByEvidenceDocumentIds(
+            @Param("documentIds") List<Long> documentIds
+    );
+
     @EntityGraph(attributePaths = {
             "workOrder",
             "workOrder.jobCase",
