@@ -1,6 +1,7 @@
 package com.nocountry.qualitytrack.documents.service;
 
 import com.nocountry.qualitytrack.customers.entity.Customer;
+import com.nocountry.qualitytrack.deliveries.repository.DeliveryRepository;
 import com.nocountry.qualitytrack.documents.dto.request.CreateDocumentRequest;
 import com.nocountry.qualitytrack.documents.dto.response.DocumentResponse;
 import com.nocountry.qualitytrack.documents.entity.Document;
@@ -64,6 +65,9 @@ class DocumentServiceTest {
     private WorkOrderDocumentRepository workOrderDocumentRepository;
 
     @Mock
+    private DeliveryRepository deliveryRepository;
+
+    @Mock
     private JobCase jobCase;
 
     @Mock
@@ -85,7 +89,8 @@ class DocumentServiceTest {
                 jobCaseRepository,
                 accessService,
                 storage,
-                workOrderDocumentRepository
+                workOrderDocumentRepository,
+                deliveryRepository
         );
     }
 
@@ -100,7 +105,7 @@ class DocumentServiceTest {
 
         stubCaseCustomer();
         when(jobCaseRepository.findById(12L)).thenReturn(Optional.of(jobCase));
-        when(accessService.requireCanCreate(10L, jobCase)).thenReturn(user);
+        when(accessService.requireCanCreate(10L, jobCase, "DRAWING")).thenReturn(user);
         when(user.getId()).thenReturn(10L);
         when(user.getFirstName()).thenReturn("Ana");
         when(user.getLastName()).thenReturn("López");
@@ -146,7 +151,7 @@ class DocumentServiceTest {
 
         stubCaseCustomer();
         when(jobCaseRepository.findById(12L)).thenReturn(Optional.of(jobCase));
-        when(accessService.requireCanCreate(10L, jobCase)).thenReturn(user);
+        when(accessService.requireCanCreate(10L, jobCase, "DRAWING")).thenReturn(user);
         when(documentRepository.saveAndFlush(any(Document.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
         when(storage.store(
@@ -291,6 +296,8 @@ class DocumentServiceTest {
         )).thenReturn(Optional.of(document));
         when(accessService.requireCanRemove(10L, document)).thenReturn(user);
         when(workOrderDocumentRepository.existsByDocument_Id(7L)).thenReturn(false);
+        when(deliveryRepository.existsByEvidenceDocumentVersion_Document_Id(7L))
+                .thenReturn(false);
         when(documentRepository.saveAndFlush(document)).thenReturn(document);
 
         String removedDocumentName = service.remove(10L, 12L, 7L);
@@ -301,6 +308,35 @@ class DocumentServiceTest {
         assertNotNull(document.getRemovedAt());
         verify(documentRepository).saveAndFlush(document);
         verifyNoInteractions(storage);
+    }
+
+    @Test
+    void refusesToRemoveDocumentPinnedAsDeliveryEvidence() {
+        Document document = Document.create(
+                jobCase,
+                "DELIVERY_EVIDENCE",
+                "Acuse de entrega",
+                null,
+                user
+        );
+
+        when(documentRepository.findByIdAndCaseIdAndStatusForUpdate(
+                7L,
+                12L,
+                DocumentStatus.ACTIVE
+        )).thenReturn(Optional.of(document));
+        when(accessService.requireCanRemove(10L, document)).thenReturn(user);
+        when(workOrderDocumentRepository.existsByDocument_Id(7L)).thenReturn(false);
+        when(deliveryRepository.existsByEvidenceDocumentVersion_Document_Id(7L))
+                .thenReturn(true);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.remove(10L, 12L, 7L)
+        );
+
+        assertEquals(ApiErrorCode.DATA_CONFLICT, exception.getCode());
+        assertEquals(DocumentStatus.ACTIVE, document.getStatus());
     }
 
     @Test

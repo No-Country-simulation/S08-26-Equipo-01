@@ -1,5 +1,6 @@
 package com.nocountry.qualitytrack.documents.service;
 
+import com.nocountry.qualitytrack.deliveries.repository.DeliveryRepository;
 import com.nocountry.qualitytrack.documents.dto.request.CreateDocumentRequest;
 import com.nocountry.qualitytrack.documents.dto.response.DocumentResponse;
 import com.nocountry.qualitytrack.documents.dto.response.DocumentVersionResponse;
@@ -50,6 +51,7 @@ public class DocumentService {
     private final DocumentAccessService accessService;
     private final DocumentStorage storage;
     private final WorkOrderDocumentRepository workOrderDocumentRepository;
+    private final DeliveryRepository deliveryRepository;
 
     @Transactional
     public DocumentResponse create(
@@ -60,11 +62,16 @@ public class DocumentService {
         validateFile(file);
 
         JobCase jobCase = requireJobCase(input.caseId());
-        User uploader = accessService.requireCanCreate(currentUserId, jobCase);
+        String documentType = input.documentType().trim().toUpperCase(Locale.ROOT);
+        User uploader = accessService.requireCanCreate(
+                currentUserId,
+                jobCase,
+                documentType
+        );
 
         Document document = Document.create(
                 jobCase,
-                input.documentType().trim().toUpperCase(Locale.ROOT),
+                documentType,
                 input.name().trim(),
                 normalizeNullable(input.description()),
                 uploader
@@ -207,7 +214,7 @@ public class DocumentService {
                         "No se encontró la versión del documento activo dentro del expediente."
                 ));
 
-        accessService.requireCanRead(currentUserId, version.getDocument());
+        accessService.requireCanReadVersion(currentUserId, version);
 
         try {
             Resource resource = storage.load(version.getStorageKey());
@@ -252,6 +259,12 @@ public class DocumentService {
             throw new BusinessException(
                     ApiErrorCode.DATA_CONFLICT,
                     "El documento está fijado a una orden de trabajo y no puede eliminarse."
+            );
+        }
+        if (deliveryRepository.existsByEvidenceDocumentVersion_Document_Id(documentId)) {
+            throw new BusinessException(
+                    ApiErrorCode.DATA_CONFLICT,
+                    "El documento está fijado como evidencia de una entrega y no puede eliminarse."
             );
         }
 

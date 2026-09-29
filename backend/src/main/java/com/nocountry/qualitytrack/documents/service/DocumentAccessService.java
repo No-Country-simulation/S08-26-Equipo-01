@@ -4,7 +4,11 @@ import com.nocountry.qualitytrack.customers.entity.CustomerMembership;
 import com.nocountry.qualitytrack.customers.enums.CustomerMembershipRole;
 import com.nocountry.qualitytrack.customers.enums.CustomerMembershipStatus;
 import com.nocountry.qualitytrack.customers.repository.CustomerMembershipRepository;
+import com.nocountry.qualitytrack.deliveries.entity.Delivery;
+import com.nocountry.qualitytrack.deliveries.enums.DeliveryStatus;
+import com.nocountry.qualitytrack.deliveries.repository.DeliveryRepository;
 import com.nocountry.qualitytrack.documents.entity.Document;
+import com.nocountry.qualitytrack.documents.entity.DocumentVersion;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.requests.enums.JobCaseStatus;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
@@ -24,13 +28,31 @@ public class DocumentAccessService {
 
     private final UserRepository userRepository;
     private final UserSystemRoleRepository userSystemRoleRepository;
+    private static final String DELIVERY_EVIDENCE_TYPE = "DELIVERY_EVIDENCE";
+
     private final CustomerMembershipRepository membershipRepository;
+    private final DeliveryRepository deliveryRepository;
 
     public User requireCanCreate(Long userId, JobCase jobCase) {
         User user = requireUser(userId);
 
         if (user.getAccountType() == AccountType.INTERNAL) {
             requireInternalRole(userId, true);
+            requireOpenForInternalWrite(jobCase);
+            return user;
+        }
+
+        CustomerMembership membership = requireActiveMembership(userId, jobCase);
+        requireCustomerWriteRole(membership);
+        requireOpenForCustomerWrite(jobCase);
+        return user;
+    }
+
+    public User requireCanCreate(Long userId, JobCase jobCase, String documentType) {
+        User user = requireUser(userId);
+
+        if (user.getAccountType() == AccountType.INTERNAL) {
+            requireInternalDocumentWriteRole(userId, documentType);
             requireOpenForInternalWrite(jobCase);
             return user;
         }
@@ -58,7 +80,7 @@ public class DocumentAccessService {
         JobCase jobCase = requireCase(document);
 
         if (user.getAccountType() == AccountType.INTERNAL) {
-            requireInternalRole(userId, true);
+            requireInternalDocumentWriteRole(userId, document.getDocumentType());
             requireOpenForInternalWrite(jobCase);
             return user;
         }
@@ -75,7 +97,7 @@ public class DocumentAccessService {
         JobCase jobCase = requireCase(document);
 
         if (user.getAccountType() == AccountType.INTERNAL) {
-            requireInternalRole(userId, true);
+            requireInternalDocumentWriteRole(userId, document.getDocumentType());
             requireOpenForInternalWrite(jobCase);
             return user;
         }
@@ -98,6 +120,47 @@ public class DocumentAccessService {
 
         requireActiveMembership(userId, jobCase);
         requireCustomerOwnedDocument(document);
+        return user;
+    }
+
+    public User requireCanReadVersion(Long userId, DocumentVersion version) {
+        User user = requireUser(userId);
+        Document document = version.getDocument();
+        JobCase jobCase = requireCase(document);
+
+        if (user.getAccountType() == AccountType.INTERNAL) {
+            requireInternalRole(userId, false);
+            return user;
+        }
+
+        CustomerMembership membership = requireActiveMembership(userId, jobCase);
+        if (document.getCreatedBy().getAccountType() == AccountType.CUSTOMER) {
+            return user;
+        }
+
+        if (!DELIVERY_EVIDENCE_TYPE.equals(document.getDocumentType())) {
+            throw new BusinessException(
+                    ApiErrorCode.ACCESS_DENIED,
+                    "Este documento es de uso interno y no está disponible para cuentas de cliente."
+            );
+        }
+
+        Long customerId = membership.getCustomer().getId();
+        boolean visible = deliveryRepository
+                .findAllByEvidenceDocumentVersion_IdAndWorkOrder_JobCase_CustomerRequest_Customer_Id(
+                        version.getId(),
+                        customerId
+                )
+                .stream()
+                .anyMatch(this::isCustomerVisibleDelivery);
+
+        if (!visible) {
+            throw new BusinessException(
+                    ApiErrorCode.ACCESS_DENIED,
+                    "La evidencia no está vinculada a un envío visible para el cliente."
+            );
+        }
+
         return user;
     }
 
@@ -165,6 +228,29 @@ public class DocumentAccessService {
                             : "Tu rol interno no permite consultar documentos."
             );
         }
+    }
+
+    private void requireInternalDocumentWriteRole(Long userId, String documentType) {
+        boolean allowed = userSystemRoleRepository.findAllByIdUserId(userId)
+                .stream()
+                .map(UserSystemRole::getRole)
+                .anyMatch(role -> canWriteInternalDocuments(role)
+                        || (role == SystemRole.LOGISTICS
+                        && DELIVERY_EVIDENCE_TYPE.equals(documentType)));
+
+        if (!allowed) {
+            throw new BusinessException(
+                    ApiErrorCode.ACCESS_DENIED,
+                    "Tu rol interno no permite modificar este tipo de documento."
+            );
+        }
+    }
+
+    private boolean isCustomerVisibleDelivery(Delivery delivery) {
+        return delivery.getStatus() == DeliveryStatus.DISPATCHED
+                || delivery.getStatus() == DeliveryStatus.DELIVERED
+                || (delivery.getStatus() == DeliveryStatus.CANCELLED
+                && delivery.getDispatchedAt() != null);
     }
 
     private void requireOpenForCustomerWrite(JobCase jobCase) {

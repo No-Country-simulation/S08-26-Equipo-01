@@ -50,4 +50,18 @@ public interface DocumentVersionRepository extends JpaRepository<DocumentVersion
             Long caseId,
             DocumentStatus status
     );
+
+    @EntityGraph(attributePaths = {
+            "uploadedBy",
+            "document",
+            "document.jobCase",
+            "document.jobCase.customerRequest",
+            "document.jobCase.customerRequest.customer",
+            "document.createdBy"
+    })
+    Optional<DocumentVersion> findByIdAndDocument_JobCase_IdAndDocument_Status(
+            Long versionId,
+            Long caseId,
+            DocumentStatus status
+    );
 }

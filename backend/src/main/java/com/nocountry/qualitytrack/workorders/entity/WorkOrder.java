@@ -278,6 +278,15 @@ public class WorkOrder {
         this.status = WorkOrderStatus.READY_FOR_DELIVERY;
     }
 
+    public void markDelivered() {
+        if (status != WorkOrderStatus.READY_FOR_DELIVERY) {
+            throw new IllegalStateException(
+                    "Solo una orden READY_FOR_DELIVERY puede marcarse como entregada."
+            );
+        }
+        this.status = WorkOrderStatus.DELIVERED;
+    }
+
     public boolean isProductionCompleted() {
         return actualEndAt != null;
     }
