@@ -29,9 +29,23 @@ public class DocumentAccessService {
     private final UserRepository userRepository;
     private final UserSystemRoleRepository userSystemRoleRepository;
     private static final String DELIVERY_EVIDENCE_TYPE = "DELIVERY_EVIDENCE";
+    private static final String MATERIAL_CERTIFICATE_TYPE = "MATERIAL_CERTIFICATE";
 
     private final CustomerMembershipRepository membershipRepository;
     private final DeliveryRepository deliveryRepository;
+
+    public User requireInternalReader(Long userId) {
+        User user = requireUser(userId);
+        if (user.getAccountType() != AccountType.INTERNAL) {
+            throw new BusinessException(
+                    ApiErrorCode.ACCESS_DENIED,
+                    "El centro documental está disponible únicamente para usuarios internos."
+            );
+        }
+
+        requireInternalRole(userId, false);
+        return user;
+    }
 
     public User requireCanCreate(Long userId, JobCase jobCase) {
         User user = requireUser(userId);
@@ -236,7 +250,9 @@ public class DocumentAccessService {
                 .map(UserSystemRole::getRole)
                 .anyMatch(role -> canWriteInternalDocuments(role)
                         || (role == SystemRole.LOGISTICS
-                        && DELIVERY_EVIDENCE_TYPE.equals(documentType)));
+                        && DELIVERY_EVIDENCE_TYPE.equals(documentType))
+                        || (role == SystemRole.PRODUCTION
+                        && MATERIAL_CERTIFICATE_TYPE.equals(documentType)));
 
         if (!allowed) {
             throw new BusinessException(

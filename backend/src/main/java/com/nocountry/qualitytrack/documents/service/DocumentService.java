@@ -12,6 +12,7 @@ import com.nocountry.qualitytrack.documents.repository.DocumentVersionRepository
 import com.nocountry.qualitytrack.documents.storage.DocumentStorage;
 import com.nocountry.qualitytrack.documents.storage.DocumentStorageException;
 import com.nocountry.qualitytrack.documents.storage.StoredDocumentFile;
+import com.nocountry.qualitytrack.materials.repository.MaterialLotRepository;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
@@ -52,6 +53,7 @@ public class DocumentService {
     private final DocumentStorage storage;
     private final WorkOrderDocumentRepository workOrderDocumentRepository;
     private final DeliveryRepository deliveryRepository;
+    private final MaterialLotRepository materialLotRepository;
 
     @Transactional
     public DocumentResponse create(
@@ -265,6 +267,12 @@ public class DocumentService {
             throw new BusinessException(
                     ApiErrorCode.DATA_CONFLICT,
                     "El documento está fijado como evidencia de una entrega y no puede eliminarse."
+            );
+        }
+        if (materialLotRepository.existsByCertificateDocumentVersion_Document_Id(documentId)) {
+            throw new BusinessException(
+                    ApiErrorCode.DATA_CONFLICT,
+                    "El documento está fijado como certificado de un lote y no puede eliminarse."
             );
         }
 

@@ -63,6 +63,46 @@ class DocumentAccessServiceTest {
     }
 
     @Test
+    void auditorCanReadDocumentCenter() {
+        when(userRepository.findById(10L)).thenReturn(Optional.of(user));
+        when(user.getAccountType()).thenReturn(AccountType.INTERNAL);
+        when(userSystemRoleRepository.findAllByIdUserId(10L)).thenReturn(List.of(systemRole));
+        when(systemRole.getRole()).thenReturn(SystemRole.AUDITOR);
+
+        assertSame(user, service.requireInternalReader(10L));
+    }
+
+    @Test
+    void customerCannotReadDocumentCenter() {
+        when(userRepository.findById(20L)).thenReturn(Optional.of(user));
+        when(user.getAccountType()).thenReturn(AccountType.CUSTOMER);
+
+        assertThrows(
+                BusinessException.class,
+                () -> service.requireInternalReader(20L)
+        );
+    }
+
+    @Test
+    void productionCanWriteOnlyMaterialCertificates() {
+        when(userRepository.findById(10L)).thenReturn(Optional.of(user));
+        when(user.getAccountType()).thenReturn(AccountType.INTERNAL);
+        when(userSystemRoleRepository.findAllByIdUserId(10L)).thenReturn(List.of(systemRole));
+        when(systemRole.getRole()).thenReturn(SystemRole.PRODUCTION);
+        when(jobCase.getStatus()).thenReturn(JobCaseStatus.IN_PRODUCTION);
+
+        assertThrows(
+                BusinessException.class,
+                () -> service.requireCanCreate(10L, jobCase, "DRAWING")
+        );
+
+        assertSame(
+                user,
+                service.requireCanCreate(10L, jobCase, "MATERIAL_CERTIFICATE")
+        );
+    }
+
+    @Test
     void logisticsCanWriteOnlyDeliveryEvidence() {
         when(userRepository.findById(10L)).thenReturn(Optional.of(user));
         when(user.getAccountType()).thenReturn(AccountType.INTERNAL);

@@ -1,7 +1,9 @@
 package com.nocountry.qualitytrack.materials.service;
 
 import com.nocountry.qualitytrack.documents.entity.DocumentVersion;
+import com.nocountry.qualitytrack.documents.enums.DocumentStatus;
 import com.nocountry.qualitytrack.documents.repository.DocumentVersionRepository;
+import com.nocountry.qualitytrack.documents.service.DocumentAccessService;
 import com.nocountry.qualitytrack.materials.dto.request.CreateMaterialLotRequest;
 import com.nocountry.qualitytrack.materials.dto.request.CreateMaterialRequest;
 import com.nocountry.qualitytrack.materials.dto.request.RecordMaterialConsumptionRequest;
@@ -38,10 +40,13 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MaterialService {
 
+    private static final String MATERIAL_CERTIFICATE_TYPE = "MATERIAL_CERTIFICATE";
+
     private final MaterialRepository materialRepository;
     private final MaterialLotRepository materialLotRepository;
     private final WorkOrderMaterialRepository workOrderMaterialRepository;
     private final DocumentVersionRepository documentVersionRepository;
+    private final DocumentAccessService documentAccessService;
     private final WorkOrderRepository workOrderRepository;
     private final WorkOrderAccessPolicy accessPolicy;
     private final TraceabilityService traceabilityService;
@@ -99,10 +104,10 @@ public class MaterialService {
 
         DocumentVersion certificateVersion = request.certificateDocumentVersionId() == null
                 ? null
-                : documentVersionRepository.findById(request.certificateDocumentVersionId())
-                .orElseThrow(() -> notFound(
-                        "No se encontró la versión documental del certificado."
-                ));
+                : requireMaterialCertificate(
+                        currentUserId,
+                        request.certificateDocumentVersionId()
+                );
 
         MaterialLot lot;
         try {
@@ -248,6 +253,29 @@ public class MaterialService {
             }
         }
         return metadata;
+    }
+
+    private DocumentVersion requireMaterialCertificate(
+            Long currentUserId,
+            Long documentVersionId
+    ) {
+        DocumentVersion version = documentVersionRepository
+                .findByIdAndDocument_Status(
+                        documentVersionId,
+                        DocumentStatus.ACTIVE
+                )
+                .orElseThrow(() -> notFound(
+                        "No se encontró una versión documental activa para el certificado."
+                ));
+
+        if (!MATERIAL_CERTIFICATE_TYPE.equals(version.getDocument().getDocumentType())) {
+            conflict(
+                    "La versión documental del lote debe pertenecer a un documento MATERIAL_CERTIFICATE."
+            );
+        }
+
+        documentAccessService.requireCanReadVersion(currentUserId, version);
+        return version;
     }
 
     private BusinessException notFound(String message) {

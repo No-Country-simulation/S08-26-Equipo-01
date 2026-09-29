@@ -82,6 +82,11 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
     boolean existsByEvidenceDocumentVersion_Document_Id(Long documentId);
 
     @EntityGraph(attributePaths = {
+            "evidenceDocumentVersion"
+    })
+    List<Delivery> findAllByEvidenceDocumentVersion_Document_IdOrderByIdAsc(Long documentId);
+
+    @EntityGraph(attributePaths = {
             "workOrder",
             "workOrder.jobCase",
             "workOrder.jobCase.customerRequest",

@@ -12,6 +12,7 @@ import com.nocountry.qualitytrack.documents.repository.DocumentVersionRepository
 import com.nocountry.qualitytrack.documents.storage.DocumentStorage;
 import com.nocountry.qualitytrack.documents.storage.DocumentStorageException;
 import com.nocountry.qualitytrack.documents.storage.StoredDocumentFile;
+import com.nocountry.qualitytrack.materials.repository.MaterialLotRepository;
 import com.nocountry.qualitytrack.requests.entity.CustomerRequest;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
@@ -68,6 +69,9 @@ class DocumentServiceTest {
     private DeliveryRepository deliveryRepository;
 
     @Mock
+    private MaterialLotRepository materialLotRepository;
+
+    @Mock
     private JobCase jobCase;
 
     @Mock
@@ -90,7 +94,8 @@ class DocumentServiceTest {
                 accessService,
                 storage,
                 workOrderDocumentRepository,
-                deliveryRepository
+                deliveryRepository,
+                materialLotRepository
         );
     }
 
@@ -337,6 +342,38 @@ class DocumentServiceTest {
 
         assertEquals(ApiErrorCode.DATA_CONFLICT, exception.getCode());
         assertEquals(DocumentStatus.ACTIVE, document.getStatus());
+    }
+
+    @Test
+    void refusesToRemoveDocumentPinnedAsMaterialLotCertificate() {
+        Document document = Document.create(
+                jobCase,
+                "MATERIAL_CERTIFICATE",
+                "Certificado de material",
+                null,
+                user
+        );
+
+        when(documentRepository.findByIdAndCaseIdAndStatusForUpdate(
+                7L,
+                12L,
+                DocumentStatus.ACTIVE
+        )).thenReturn(Optional.of(document));
+        when(accessService.requireCanRemove(10L, document)).thenReturn(user);
+        when(workOrderDocumentRepository.existsByDocument_Id(7L)).thenReturn(false);
+        when(deliveryRepository.existsByEvidenceDocumentVersion_Document_Id(7L))
+                .thenReturn(false);
+        when(materialLotRepository.existsByCertificateDocumentVersion_Document_Id(7L))
+                .thenReturn(true);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.remove(10L, 12L, 7L)
+        );
+
+        assertEquals(ApiErrorCode.DATA_CONFLICT, exception.getCode());
+        assertEquals(DocumentStatus.ACTIVE, document.getStatus());
+        verifyNoInteractions(storage);
     }
 
     @Test

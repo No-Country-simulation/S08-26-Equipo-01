@@ -1,6 +1,11 @@
 package com.nocountry.qualitytrack.materials.service;
 
+import com.nocountry.qualitytrack.documents.entity.Document;
+import com.nocountry.qualitytrack.documents.entity.DocumentVersion;
+import com.nocountry.qualitytrack.documents.enums.DocumentStatus;
 import com.nocountry.qualitytrack.documents.repository.DocumentVersionRepository;
+import com.nocountry.qualitytrack.documents.service.DocumentAccessService;
+import com.nocountry.qualitytrack.materials.dto.request.CreateMaterialLotRequest;
 import com.nocountry.qualitytrack.materials.dto.request.RecordMaterialConsumptionRequest;
 import com.nocountry.qualitytrack.materials.entity.Material;
 import com.nocountry.qualitytrack.materials.entity.MaterialLot;
@@ -34,6 +39,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -43,6 +49,7 @@ class MaterialServiceTest {
     @Mock private MaterialLotRepository materialLotRepository;
     @Mock private WorkOrderMaterialRepository workOrderMaterialRepository;
     @Mock private DocumentVersionRepository documentVersionRepository;
+    @Mock private DocumentAccessService documentAccessService;
     @Mock private WorkOrderRepository workOrderRepository;
     @Mock private WorkOrderAccessPolicy accessPolicy;
     @Mock private TraceabilityService traceabilityService;
@@ -62,6 +69,7 @@ class MaterialServiceTest {
                 materialLotRepository,
                 workOrderMaterialRepository,
                 documentVersionRepository,
+                documentAccessService,
                 workOrderRepository,
                 accessPolicy,
                 traceabilityService
@@ -101,6 +109,132 @@ class MaterialServiceTest {
                 null
         );
         ReflectionTestUtils.setField(lot, "id", 40L);
+    }
+
+    @Test
+    void createsLotWithActiveMaterialCertificate() {
+        Document document = Document.create(
+                jobCase,
+                "MATERIAL_CERTIFICATE",
+                "Certificado de material",
+                null,
+                actor
+        );
+        ReflectionTestUtils.setField(document, "id", 70L);
+
+        DocumentVersion certificate = DocumentVersion.upload(
+                document,
+                1,
+                "certificado.pdf",
+                "materials/certificado.pdf",
+                "application/pdf",
+                100L,
+                "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                actor
+        );
+        ReflectionTestUtils.setField(certificate, "id", 80L);
+
+        when(accessPolicy.requireProductionActor(10L)).thenReturn(actor);
+        when(materialRepository.findById(30L)).thenReturn(Optional.of(material));
+        when(documentVersionRepository.findByIdAndDocument_Status(
+                80L,
+                DocumentStatus.ACTIVE
+        )).thenReturn(Optional.of(certificate));
+        when(documentAccessService.requireCanReadVersion(10L, certificate)).thenReturn(actor);
+        when(materialLotRepository.saveAndFlush(any(MaterialLot.class)))
+                .thenAnswer(invocation -> {
+                    MaterialLot saved = invocation.getArgument(0);
+                    ReflectionTestUtils.setField(saved, "id", 40L);
+                    return saved;
+                });
+
+        var response = service.createLot(
+                10L,
+                30L,
+                new CreateMaterialLotRequest(
+                        "LOT-CERT-001",
+                        "Proveedor",
+                        Instant.parse("2026-09-20T08:00:00Z"),
+                        new BigDecimal("100.000"),
+                        80L
+                )
+        );
+
+        assertEquals(80L, response.certificateDocumentVersionId());
+        verify(documentAccessService).requireCanReadVersion(10L, certificate);
+    }
+
+    @Test
+    void rejectsInactiveMaterialCertificateVersion() {
+        when(accessPolicy.requireProductionActor(10L)).thenReturn(actor);
+        when(materialRepository.findById(30L)).thenReturn(Optional.of(material));
+        when(documentVersionRepository.findByIdAndDocument_Status(
+                80L,
+                DocumentStatus.ACTIVE
+        )).thenReturn(Optional.empty());
+
+        assertThrows(
+                BusinessException.class,
+                () -> service.createLot(
+                        10L,
+                        30L,
+                        new CreateMaterialLotRequest(
+                                "LOT-CERT-002",
+                                "Proveedor",
+                                Instant.parse("2026-09-20T08:00:00Z"),
+                                new BigDecimal("100.000"),
+                                80L
+                        )
+                )
+        );
+
+        verifyNoInteractions(documentAccessService);
+    }
+
+    @Test
+    void rejectsDocumentVersionThatIsNotMaterialCertificate() {
+        Document document = Document.create(
+                jobCase,
+                "DRAWING",
+                "Plano",
+                null,
+                actor
+        );
+
+        DocumentVersion certificate = DocumentVersion.upload(
+                document,
+                1,
+                "plano.pdf",
+                "materials/plano.pdf",
+                "application/pdf",
+                100L,
+                "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+                actor
+        );
+
+        when(accessPolicy.requireProductionActor(10L)).thenReturn(actor);
+        when(materialRepository.findById(30L)).thenReturn(Optional.of(material));
+        when(documentVersionRepository.findByIdAndDocument_Status(
+                80L,
+                DocumentStatus.ACTIVE
+        )).thenReturn(Optional.of(certificate));
+
+        assertThrows(
+                BusinessException.class,
+                () -> service.createLot(
+                        10L,
+                        30L,
+                        new CreateMaterialLotRequest(
+                                "LOT-CERT-003",
+                                "Proveedor",
+                                Instant.parse("2026-09-20T08:00:00Z"),
+                                new BigDecimal("100.000"),
+                                80L
+                        )
+                )
+        );
+
+        verifyNoInteractions(documentAccessService);
     }
 
     @Test
