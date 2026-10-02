@@ -4,10 +4,13 @@ import com.nocountry.qualitytrack.notification.email.template.TransactionalEmail
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 
 @Configuration
@@ -42,8 +45,23 @@ public class EmailConfig {
                 .requestFactory(requestFactory)
                 .build();
 
-        EmailService resendEmailService = new ResendEmailService(restClient, resendFrom.trim(), emailFactory);
+        EmailService resendEmailService = new ResendEmailService(
+                restClient,
+                resendFrom.trim(),
+                emailFactory,
+                readEmbeddedLogo()
+        );
         return new AfterCommitEmailService(resendEmailService);
+    }
+
+    private String readEmbeddedLogo() {
+        ClassPathResource resource = new ClassPathResource("email/qualitytrack-logo.png.base64");
+
+        try (var inputStream = resource.getInputStream()) {
+            return new String(inputStream.readAllBytes(), StandardCharsets.UTF_8).trim();
+        } catch (IOException exception) {
+            throw new IllegalStateException("QualityTrack email logo could not be loaded.", exception);
+        }
     }
 
     private void validateTimeout(Duration timeout, String environmentVariable) {

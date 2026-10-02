@@ -115,13 +115,15 @@ public class QuotationService {
                 ).orElse(null)
                 : null;
 
-        boolean adjustmentPending = nextRevision != null
+        boolean hasFollowingAdjustment = nextRevision != null
+                && nextRevision.getAdjustmentNotes() != null;
+        boolean adjustmentPending = hasFollowingAdjustment
                 && nextRevision.getStatus() == QuotationStatus.DRAFT;
 
-        String adjustmentNotes = adjustmentPending
+        String adjustmentNotes = hasFollowingAdjustment
                 ? nextRevision.getAdjustmentNotes()
                 : quotation.getAdjustmentNotes();
-        String adjustmentResponse = adjustmentPending
+        String adjustmentResponse = hasFollowingAdjustment
                 ? null
                 : quotation.getAdjustmentResponse();
 
@@ -129,7 +131,8 @@ public class QuotationService {
                 quotation,
                 customerStatusFor(quotation, adjustmentPending),
                 adjustmentNotes,
-                adjustmentResponse
+                adjustmentResponse,
+                quotationSourceService.getForCustomer(quotation)
         );
     }
 

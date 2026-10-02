@@ -121,6 +121,20 @@ public class User {
         this.emailVerifiedAt = activatedAt;
     }
 
+    public void suspendInternal() {
+        if (accountType != AccountType.INTERNAL || status != UserStatus.ACTIVE) {
+            throw new IllegalStateException("Solo una cuenta interna activa puede suspenderse.");
+        }
+        this.status = UserStatus.SUSPENDED;
+    }
+
+    public void reactivateInternal() {
+        if (accountType != AccountType.INTERNAL || status != UserStatus.SUSPENDED) {
+            throw new IllegalStateException("Solo una cuenta interna suspendida puede reactivarse.");
+        }
+        this.status = UserStatus.ACTIVE;
+    }
+
     public void verifyEmail(Instant verifiedAt) {
         this.status = UserStatus.ACTIVE;
         this.emailVerifiedAt = verifiedAt;

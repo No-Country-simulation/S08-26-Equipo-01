@@ -73,6 +73,23 @@ public class Machine {
         this.status = MachineStatus.AVAILABLE;
     }
 
+    public void changeOperationalStatus(MachineStatus newStatus) {
+        if (newStatus == null) {
+            throw new IllegalArgumentException("El estado de la máquina es obligatorio.");
+        }
+        if (status == MachineStatus.IN_USE) {
+            throw new IllegalStateException(
+                    "Una máquina IN_USE no puede cambiarse manualmente mientras participa en una ejecución."
+            );
+        }
+        if (newStatus == MachineStatus.IN_USE) {
+            throw new IllegalArgumentException(
+                    "El estado IN_USE solo puede asignarse al iniciar una operación de producción."
+            );
+        }
+        this.status = newStatus;
+    }
+
     private static String requireText(String value, String message) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(message);

@@ -4,12 +4,12 @@ import com.nocountry.qualitytrack.auth.security.CurrentUserId;
 import com.nocountry.qualitytrack.quality.documentation.CompleteQualityInspectionApiDocs;
 import com.nocountry.qualitytrack.quality.documentation.GetQualityInspectionApiDocs;
 import com.nocountry.qualitytrack.quality.documentation.QualityApiDocs;
-import com.nocountry.qualitytrack.quality.documentation.SaveQualityMeasurementApiDocs;
+import com.nocountry.qualitytrack.quality.documentation.SaveQualityCheckApiDocs;
 import com.nocountry.qualitytrack.quality.documentation.StartQualityInspectionApiDocs;
-import com.nocountry.qualitytrack.quality.dto.request.SaveQualityMeasurementRequest;
+import com.nocountry.qualitytrack.quality.dto.request.SaveQualityCheckRequest;
 import com.nocountry.qualitytrack.quality.dto.request.StartQualityInspectionRequest;
 import com.nocountry.qualitytrack.quality.dto.response.QualityInspectionResponse;
-import com.nocountry.qualitytrack.quality.dto.response.QualityMeasurementResponse;
+import com.nocountry.qualitytrack.quality.dto.response.QualityCheckResponse;
 import com.nocountry.qualitytrack.quality.service.QualityWorkflowService;
 import com.nocountry.qualitytrack.shared.response.ApiResponse;
 import com.nocountry.qualitytrack.shared.response.ApiSuccessCode;
@@ -60,18 +60,18 @@ public class QualityInspectionController {
         ));
     }
 
-    @SaveQualityMeasurementApiDocs
-    @PostMapping("/{inspectionId}/measurements")
-    public ResponseEntity<ApiResponse<QualityMeasurementResponse>> addMeasurement(
+    @SaveQualityCheckApiDocs
+    @PostMapping("/{inspectionId}/checks")
+    public ResponseEntity<ApiResponse<QualityCheckResponse>> addCheck(
             @CurrentUserId Long currentUserId,
             @PathVariable Long inspectionId,
-            @Valid @RequestBody SaveQualityMeasurementRequest request
+            @Valid @RequestBody SaveQualityCheckRequest request
     ) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(ApiResponse.success(
-                        ApiSuccessCode.QUALITY_MEASUREMENT_RECORDED,
-                        "Medición registrada correctamente.",
-                        qualityWorkflowService.addMeasurement(
+                        ApiSuccessCode.QUALITY_CHECK_RECORDED,
+                        "Control de calidad registrado correctamente.",
+                        qualityWorkflowService.addCheck(
                                 currentUserId,
                                 inspectionId,
                                 request
@@ -79,21 +79,21 @@ public class QualityInspectionController {
                 ));
     }
 
-    @SaveQualityMeasurementApiDocs
-    @PutMapping("/{inspectionId}/measurements/{measurementId}")
-    public ResponseEntity<ApiResponse<QualityMeasurementResponse>> updateMeasurement(
+    @SaveQualityCheckApiDocs
+    @PutMapping("/{inspectionId}/checks/{checkId}")
+    public ResponseEntity<ApiResponse<QualityCheckResponse>> updateCheck(
             @CurrentUserId Long currentUserId,
             @PathVariable Long inspectionId,
-            @PathVariable Long measurementId,
-            @Valid @RequestBody SaveQualityMeasurementRequest request
+            @PathVariable Long checkId,
+            @Valid @RequestBody SaveQualityCheckRequest request
     ) {
         return ResponseEntity.ok(ApiResponse.success(
-                ApiSuccessCode.QUALITY_MEASUREMENT_UPDATED,
-                "Medición actualizada correctamente.",
-                qualityWorkflowService.updateMeasurement(
+                ApiSuccessCode.QUALITY_CHECK_UPDATED,
+                "Control de calidad actualizado correctamente.",
+                qualityWorkflowService.updateCheck(
                         currentUserId,
                         inspectionId,
-                        measurementId,
+                        checkId,
                         request
                 )
         ));

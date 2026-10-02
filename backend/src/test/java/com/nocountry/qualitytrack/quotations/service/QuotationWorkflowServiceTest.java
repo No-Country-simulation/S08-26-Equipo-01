@@ -421,7 +421,7 @@ class QuotationWorkflowServiceTest {
     }
 
     @Test
-    void customerCanApproveCurrentSentRevisionWithoutCreatingWorkOrder() {
+    void customerApprovalHandsCaseOffToWorkOrderQueue() {
         JobCase jobCase = readyJobCase();
         Quotation quotation = sentQuotation(jobCase);
 
@@ -434,6 +434,7 @@ class QuotationWorkflowServiceTest {
 
         assertEquals(CustomerQuotationStatus.APPROVED, response.customerStatus());
         assertNotNull(response.approvedAt());
+        assertEquals(JobCaseStatus.AWAITING_WORK_ORDER, jobCase.getStatus());
         verify(traceabilityService).record(
                 eq(jobCase),
                 any(),

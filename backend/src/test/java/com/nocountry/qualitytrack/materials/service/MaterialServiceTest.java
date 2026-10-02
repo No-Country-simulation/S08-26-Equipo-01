@@ -2,9 +2,7 @@ package com.nocountry.qualitytrack.materials.service;
 
 import com.nocountry.qualitytrack.documents.entity.Document;
 import com.nocountry.qualitytrack.documents.entity.DocumentVersion;
-import com.nocountry.qualitytrack.documents.enums.DocumentStatus;
-import com.nocountry.qualitytrack.documents.repository.DocumentVersionRepository;
-import com.nocountry.qualitytrack.documents.service.DocumentAccessService;
+import com.nocountry.qualitytrack.documents.service.DocumentService;
 import com.nocountry.qualitytrack.materials.dto.request.CreateMaterialLotRequest;
 import com.nocountry.qualitytrack.materials.dto.request.RecordMaterialConsumptionRequest;
 import com.nocountry.qualitytrack.materials.entity.Material;
@@ -28,6 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -48,8 +47,8 @@ class MaterialServiceTest {
     @Mock private MaterialRepository materialRepository;
     @Mock private MaterialLotRepository materialLotRepository;
     @Mock private WorkOrderMaterialRepository workOrderMaterialRepository;
-    @Mock private DocumentVersionRepository documentVersionRepository;
-    @Mock private DocumentAccessService documentAccessService;
+    @Mock private DocumentService documentService;
+    @Mock private MultipartFile certificateFile;
     @Mock private WorkOrderRepository workOrderRepository;
     @Mock private WorkOrderAccessPolicy accessPolicy;
     @Mock private TraceabilityService traceabilityService;
@@ -68,8 +67,7 @@ class MaterialServiceTest {
                 materialRepository,
                 materialLotRepository,
                 workOrderMaterialRepository,
-                documentVersionRepository,
-                documentAccessService,
+                documentService,
                 workOrderRepository,
                 accessPolicy,
                 traceabilityService
@@ -112,11 +110,11 @@ class MaterialServiceTest {
     }
 
     @Test
-    void createsLotWithActiveMaterialCertificate() {
-        Document document = Document.create(
-                jobCase,
+    void attachesCertificateOwnedByMaterialLot() {
+        Document document = Document.createForMaterialLot(
+                lot,
                 "MATERIAL_CERTIFICATE",
-                "Certificado de material",
+                "Certificado LOT-001",
                 null,
                 actor
         );
@@ -126,7 +124,7 @@ class MaterialServiceTest {
                 document,
                 1,
                 "certificado.pdf",
-                "materials/certificado.pdf",
+                "materials/material-30/lot-40/v1-certificado.pdf",
                 "application/pdf",
                 100L,
                 "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
@@ -135,106 +133,22 @@ class MaterialServiceTest {
         ReflectionTestUtils.setField(certificate, "id", 80L);
 
         when(accessPolicy.requireProductionActor(10L)).thenReturn(actor);
-        when(materialRepository.findById(30L)).thenReturn(Optional.of(material));
-        when(documentVersionRepository.findByIdAndDocument_Status(
-                80L,
-                DocumentStatus.ACTIVE
-        )).thenReturn(Optional.of(certificate));
-        when(documentAccessService.requireCanReadVersion(10L, certificate)).thenReturn(actor);
-        when(materialLotRepository.saveAndFlush(any(MaterialLot.class)))
-                .thenAnswer(invocation -> {
-                    MaterialLot saved = invocation.getArgument(0);
-                    ReflectionTestUtils.setField(saved, "id", 40L);
-                    return saved;
-                });
+        when(materialLotRepository.findByIdForUpdate(40L)).thenReturn(Optional.of(lot));
+        when(documentService.upsertMaterialCertificate(10L, lot, certificateFile))
+                .thenReturn(certificate);
+        when(materialLotRepository.saveAndFlush(lot)).thenReturn(lot);
 
-        var response = service.createLot(
+        var response = service.attachCertificate(
                 10L,
                 30L,
-                new CreateMaterialLotRequest(
-                        "LOT-CERT-001",
-                        "Proveedor",
-                        Instant.parse("2026-09-20T08:00:00Z"),
-                        new BigDecimal("100.000"),
-                        80L
-                )
+                40L,
+                certificateFile
         );
 
+        assertEquals(70L, response.certificateDocumentId());
         assertEquals(80L, response.certificateDocumentVersionId());
-        verify(documentAccessService).requireCanReadVersion(10L, certificate);
-    }
-
-    @Test
-    void rejectsInactiveMaterialCertificateVersion() {
-        when(accessPolicy.requireProductionActor(10L)).thenReturn(actor);
-        when(materialRepository.findById(30L)).thenReturn(Optional.of(material));
-        when(documentVersionRepository.findByIdAndDocument_Status(
-                80L,
-                DocumentStatus.ACTIVE
-        )).thenReturn(Optional.empty());
-
-        assertThrows(
-                BusinessException.class,
-                () -> service.createLot(
-                        10L,
-                        30L,
-                        new CreateMaterialLotRequest(
-                                "LOT-CERT-002",
-                                "Proveedor",
-                                Instant.parse("2026-09-20T08:00:00Z"),
-                                new BigDecimal("100.000"),
-                                80L
-                        )
-                )
-        );
-
-        verifyNoInteractions(documentAccessService);
-    }
-
-    @Test
-    void rejectsDocumentVersionThatIsNotMaterialCertificate() {
-        Document document = Document.create(
-                jobCase,
-                "DRAWING",
-                "Plano",
-                null,
-                actor
-        );
-
-        DocumentVersion certificate = DocumentVersion.upload(
-                document,
-                1,
-                "plano.pdf",
-                "materials/plano.pdf",
-                "application/pdf",
-                100L,
-                "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
-                actor
-        );
-
-        when(accessPolicy.requireProductionActor(10L)).thenReturn(actor);
-        when(materialRepository.findById(30L)).thenReturn(Optional.of(material));
-        when(documentVersionRepository.findByIdAndDocument_Status(
-                80L,
-                DocumentStatus.ACTIVE
-        )).thenReturn(Optional.of(certificate));
-
-        assertThrows(
-                BusinessException.class,
-                () -> service.createLot(
-                        10L,
-                        30L,
-                        new CreateMaterialLotRequest(
-                                "LOT-CERT-003",
-                                "Proveedor",
-                                Instant.parse("2026-09-20T08:00:00Z"),
-                                new BigDecimal("100.000"),
-                                80L
-                        )
-                )
-        );
-
-        verifyNoInteractions(documentAccessService);
+        assertEquals("certificado.pdf", response.certificateFileName());
+        verify(documentService).upsertMaterialCertificate(10L, lot, certificateFile);
     }
 
     @Test
@@ -291,6 +205,36 @@ class MaterialServiceTest {
                         )
                 )
         );
+    }
+
+    @Test
+    void canRecordConsumptionAfterOperationsFinishBeforeQualityHandoff() {
+        workOrder.markProductionCompleted(
+                Instant.parse("2026-09-28T12:00:00Z")
+        );
+
+        when(accessPolicy.requireProductionActor(10L)).thenReturn(actor);
+        when(workOrderRepository.findByIdForUpdate(7L))
+                .thenReturn(Optional.of(workOrder));
+        when(materialLotRepository.findByIdForUpdate(40L))
+                .thenReturn(Optional.of(lot));
+        when(workOrderMaterialRepository.sumQuantityUsedByMaterialLotId(40L))
+                .thenReturn(BigDecimal.ZERO);
+        when(workOrderMaterialRepository.findByWorkOrderAndLotForUpdate(7L, 40L))
+                .thenReturn(Optional.empty());
+        when(workOrderMaterialRepository.saveAndFlush(any(WorkOrderMaterial.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        var response = service.recordConsumption(
+                10L,
+                7L,
+                new RecordMaterialConsumptionRequest(
+                        40L,
+                        new BigDecimal("1.500")
+                )
+        );
+
+        assertEquals(new BigDecimal("1.500"), response.quantityUsed());
     }
 
     @Test

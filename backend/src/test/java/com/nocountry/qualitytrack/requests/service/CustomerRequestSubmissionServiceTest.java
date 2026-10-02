@@ -8,6 +8,7 @@ import com.nocountry.qualitytrack.requests.dto.response.CustomerRequestResponse;
 import com.nocountry.qualitytrack.requests.dto.response.JobCaseSummaryResponse;
 import com.nocountry.qualitytrack.requests.enums.JobCaseStatus;
 import com.nocountry.qualitytrack.requests.enums.MaterialRequirementType;
+import com.nocountry.qualitytrack.requests.enums.RequestDeliveryMode;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
 import org.junit.jupiter.api.BeforeEach;
@@ -133,7 +134,18 @@ class CustomerRequestSubmissionServiceTest {
                 25,
                 MaterialRequirementType.SPECIFIED,
                 "AISI 4140",
-                LocalDate.now().plusDays(30)
+                LocalDate.now().plusDays(30),
+                RequestDeliveryMode.DEFINE_LATER,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
         );
     }
 
@@ -150,6 +162,7 @@ class CustomerRequestSubmissionServiceTest {
                 MaterialRequirementType.SPECIFIED,
                 "AISI 4140",
                 LocalDate.now().plusDays(30),
+                null,
                 10L,
                 "Ana López",
                 now,
@@ -161,6 +174,7 @@ class CustomerRequestSubmissionServiceTest {
                         null,
                         null,
                         now,
+                        null,
                         null,
                         null,
                         null

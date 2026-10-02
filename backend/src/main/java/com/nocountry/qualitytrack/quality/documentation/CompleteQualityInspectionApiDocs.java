@@ -15,12 +15,12 @@ import java.lang.annotation.Target;
 @Documented
 @Operation(
         summary = "Finalizar inspección",
-        description = "Si todas las mediciones son PASS, la inspección queda APPROVED y la OT READY_FOR_DELIVERY. Si existe algún FAIL, queda REJECTED, la OT QUALITY_HOLD y se crea una NC OPEN en la misma transacción."
+        description = "Si todos los controles son PASS, la inspección queda APPROVED y la OT READY_FOR_DELIVERY. Si existe algún FAIL, queda REJECTED, la OT QUALITY_HOLD y se crea una NC OPEN en la misma transacción."
 )
 @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Inspección finalizada"),
         @ApiResponse(responseCode = "403", description = "Solo el inspector asignado o ADMIN puede finalizarla"),
-        @ApiResponse(responseCode = "409", description = "No hay mediciones o el estado no permite finalizar")
+        @ApiResponse(responseCode = "409", description = "No hay controles o el estado no permite finalizar")
 })
 public @interface CompleteQualityInspectionApiDocs {
 }

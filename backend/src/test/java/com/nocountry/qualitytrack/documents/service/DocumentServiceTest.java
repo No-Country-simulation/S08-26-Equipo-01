@@ -12,6 +12,8 @@ import com.nocountry.qualitytrack.documents.repository.DocumentVersionRepository
 import com.nocountry.qualitytrack.documents.storage.DocumentStorage;
 import com.nocountry.qualitytrack.documents.storage.DocumentStorageException;
 import com.nocountry.qualitytrack.documents.storage.StoredDocumentFile;
+import com.nocountry.qualitytrack.materials.entity.Material;
+import com.nocountry.qualitytrack.materials.entity.MaterialLot;
 import com.nocountry.qualitytrack.materials.repository.MaterialLotRepository;
 import com.nocountry.qualitytrack.requests.entity.CustomerRequest;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
@@ -27,8 +29,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.InputStream;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -178,6 +182,67 @@ class DocumentServiceTest {
 
         assertEquals(ApiErrorCode.DOCUMENT_STORAGE_ERROR, exception.getCode());
         assertSame(storageFailure, exception.getCause());
+    }
+
+    @Test
+    void createsMaterialCertificateOwnedByLot() {
+        Material material = Material.create(
+                "AISI-304",
+                "Acero inoxidable",
+                "ASTM A240",
+                "KG"
+        );
+        ReflectionTestUtils.setField(material, "id", 30L);
+
+        MaterialLot lot = MaterialLot.create(
+                material,
+                "LOT-001",
+                "Proveedor",
+                Instant.parse("2026-09-20T08:00:00Z"),
+                new BigDecimal("100.000"),
+                null
+        );
+        ReflectionTestUtils.setField(lot, "id", 40L);
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "certificado.pdf",
+                "application/pdf",
+                "certificado".getBytes()
+        );
+
+        when(accessService.requireMaterialCertificateWriter(10L)).thenReturn(user);
+        when(documentRepository.findByMaterialLotAndTypeAndStatusForUpdate(
+                40L,
+                "MATERIAL_CERTIFICATE",
+                DocumentStatus.ACTIVE
+        )).thenReturn(Optional.empty());
+        when(documentRepository.saveAndFlush(any(Document.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(storage.storeMaterialLot(
+                eq(30L),
+                eq(40L),
+                eq(1),
+                eq("certificado.pdf"),
+                any(InputStream.class)
+        )).thenReturn(new StoredDocumentFile(
+                "materials/material-30/lot-40/v1-test",
+                11L,
+                "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        ));
+        when(documentVersionRepository.saveAndFlush(any(DocumentVersion.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+
+        DocumentVersion version = service.upsertMaterialCertificate(
+                10L,
+                lot,
+                file
+        );
+
+        assertEquals(1, version.getVersion());
+        assertEquals("MATERIAL_CERTIFICATE", version.getDocument().getDocumentType());
+        assertSame(lot, version.getDocument().getMaterialLot());
+        assertEquals("certificado.pdf", version.getFileName());
     }
 
     @Test

@@ -1,5 +1,6 @@
 package com.nocountry.qualitytrack.notification.email;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.nocountry.qualitytrack.notification.email.template.EmailContent;
 import com.nocountry.qualitytrack.notification.email.template.TransactionalEmailFactory;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
@@ -21,6 +22,7 @@ public class ResendEmailService implements EmailService {
     private final RestClient restClient;
     private final String from;
     private final TransactionalEmailFactory emailFactory;
+    private final String embeddedLogoBase64;
 
     @Override
     public void sendVerificationEmail(String recipient, String token) {
@@ -56,7 +58,13 @@ public class ResendEmailService implements EmailService {
                             from,
                             List.of(recipient),
                             content.subject(),
-                            content.html()
+                            content.html(),
+                            List.of(new ResendAttachment(
+                                    embeddedLogoBase64,
+                                    "qualitytrack-logo.png",
+                                    "qualitytrack-logo",
+                                    "image/png"
+                            ))
                     ))
                     .retrieve()
                     .body(ResendEmailResponse.class);
@@ -83,7 +91,16 @@ public class ResendEmailService implements EmailService {
             String from,
             List<String> to,
             String subject,
-            String html
+            String html,
+            List<ResendAttachment> attachments
+    ) {
+    }
+
+    private record ResendAttachment(
+            String content,
+            String filename,
+            @JsonProperty("content_id") String contentId,
+            @JsonProperty("content_type") String contentType
     ) {
     }
 

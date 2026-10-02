@@ -1,7 +1,9 @@
 package com.nocountry.qualitytrack.workorders.service;
 
+import com.nocountry.qualitytrack.quotations.repository.QuotationRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
+import com.nocountry.qualitytrack.workorders.dto.response.PendingWorkOrderResponse;
 import com.nocountry.qualitytrack.workorders.dto.response.WorkOrderDetailResponse;
 import com.nocountry.qualitytrack.workorders.dto.response.WorkOrderResponse;
 import com.nocountry.qualitytrack.workorders.entity.WorkOrder;
@@ -17,6 +19,7 @@ import java.util.List;
 public class WorkOrderService {
 
     private final WorkOrderRepository workOrderRepository;
+    private final QuotationRepository quotationRepository;
     private final WorkOrderAccessPolicy accessPolicy;
     private final WorkOrderSourceService sourceService;
     private final WorkOrderDocumentService documentService;
@@ -27,6 +30,15 @@ public class WorkOrderService {
         return workOrderRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
                 .map(WorkOrderResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<PendingWorkOrderResponse> listPendingCreation(Long currentUserId) {
+        accessPolicy.requireInternalReader(currentUserId);
+        return quotationRepository.findPendingWorkOrderCandidates()
+                .stream()
+                .map(PendingWorkOrderResponse::from)
                 .toList();
     }
 

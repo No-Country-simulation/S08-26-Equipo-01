@@ -1,9 +1,11 @@
 package com.nocountry.qualitytrack.requests.service;
 
+import com.nocountry.qualitytrack.customers.entity.CustomerAddress;
 import com.nocountry.qualitytrack.customers.entity.CustomerMembership;
 import com.nocountry.qualitytrack.customers.enums.CustomerMembershipRole;
 import com.nocountry.qualitytrack.customers.enums.CustomerMembershipStatus;
 import com.nocountry.qualitytrack.customers.enums.CustomerStatus;
+import com.nocountry.qualitytrack.customers.repository.CustomerAddressRepository;
 import com.nocountry.qualitytrack.customers.repository.CustomerMembershipRepository;
 import com.nocountry.qualitytrack.requests.dto.request.CancelCustomerRequest;
 import com.nocountry.qualitytrack.requests.dto.request.SubmitCustomerRequest;
@@ -12,10 +14,13 @@ import com.nocountry.qualitytrack.requests.dto.response.CustomerRequestDetailRes
 import com.nocountry.qualitytrack.requests.dto.response.CustomerRequestResponse;
 import com.nocountry.qualitytrack.requests.dto.response.RequestDocumentResponse;
 import com.nocountry.qualitytrack.requests.entity.CustomerRequest;
+import com.nocountry.qualitytrack.requests.entity.RequestDeliveryDestination;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.requests.enums.JobCaseStatus;
+import com.nocountry.qualitytrack.requests.enums.RequestDeliveryMode;
 import com.nocountry.qualitytrack.requests.repository.CaseInformationRequestRepository;
 import com.nocountry.qualitytrack.requests.repository.CustomerRequestRepository;
+import com.nocountry.qualitytrack.requests.repository.RequestDeliveryDestinationRepository;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
@@ -39,6 +44,8 @@ public class CustomerRequestService {
     private final JobCaseRepository jobCaseRepository;
     private final CaseInformationRequestRepository informationRequestRepository;
     private final CustomerMembershipRepository membershipRepository;
+    private final CustomerAddressRepository customerAddressRepository;
+    private final RequestDeliveryDestinationRepository deliveryDestinationRepository;
     private final RequestReferenceGenerator referenceGenerator;
     private final CustomerRequestDocumentService customerRequestDocumentService;
     private final TraceabilityService traceabilityService;
@@ -74,6 +81,10 @@ public class CustomerRequestService {
 
         request = customerRequestRepository.saveAndFlush(request);
 
+        RequestDeliveryDestination deliveryDestination =
+                createDeliveryDestination(request, customerId, input);
+        deliveryDestinationRepository.saveAndFlush(deliveryDestination);
+
         JobCase jobCase = JobCase.open(
                 request,
                 referenceGenerator.nextJobCaseNumber(),
@@ -92,7 +103,9 @@ public class CustomerRequestService {
                 metadata(
                         "requestNumber", request.getRequestNumber(),
                         "customerId", customerId,
-                        "title", request.getTitle()
+                        "title", request.getTitle(),
+                        "deliveryMode", deliveryDestination.getMode(),
+                        "deliveryDestinationLabel", deliveryDestination.getLabel()
                 )
         );
 
@@ -205,6 +218,59 @@ public class CustomerRequestService {
         );
 
         return CustomerRequestResponse.from(jobCase.getCustomerRequest(), jobCase);
+    }
+
+    private RequestDeliveryDestination createDeliveryDestination(
+            CustomerRequest request,
+            Long customerId,
+            SubmitCustomerRequest input
+    ) {
+        RequestDeliveryMode mode = input.deliveryMode();
+        if (mode == null) {
+            throw validation("Selecciona cómo deseas recibir el pedido.");
+        }
+
+        try {
+            return switch (mode) {
+                case SAVED_ADDRESS -> {
+                    if (input.customerAddressId() == null) {
+                        throw validation("Selecciona una dirección guardada.");
+                    }
+                    CustomerAddress address = customerAddressRepository
+                            .findByIdAndCustomer_Id(input.customerAddressId(), customerId)
+                            .orElseThrow(() -> validation(
+                                    "La dirección seleccionada no pertenece a esta empresa."
+                            ));
+                    yield RequestDeliveryDestination.fromSavedAddress(
+                            request,
+                            address,
+                            input.deliveryContactName(),
+                            input.deliveryContactPhone(),
+                            input.deliveryInstructions()
+                    );
+                }
+                case CUSTOM_ADDRESS -> RequestDeliveryDestination.customAddress(
+                        request,
+                        normalizeNullable(input.deliveryLabel()),
+                        input.deliveryAddress(),
+                        input.deliveryCity(),
+                        input.deliveryState(),
+                        input.deliveryPostalCode(),
+                        input.deliveryCountry(),
+                        input.deliveryContactName(),
+                        input.deliveryContactPhone(),
+                        input.deliveryInstructions()
+                );
+                case CUSTOMER_PICKUP -> RequestDeliveryDestination.pickup(request);
+                case DEFINE_LATER -> RequestDeliveryDestination.defineLater(request);
+            };
+        } catch (IllegalArgumentException exception) {
+            throw validation(exception.getMessage());
+        }
+    }
+
+    private BusinessException validation(String message) {
+        return new BusinessException(ApiErrorCode.VALIDATION_ERROR, message);
     }
 
     private CustomerMembership requireActiveMembership(Long userId, Long customerId) {

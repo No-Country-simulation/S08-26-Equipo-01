@@ -14,6 +14,14 @@ public interface DocumentStorage {
             InputStream inputStream
     );
 
+    StoredDocumentFile storeMaterialLot(
+            Long materialId,
+            Long materialLotId,
+            Integer version,
+            String fileName,
+            InputStream inputStream
+    );
+
     Resource load(String storageKey);
 
     void deleteQuietly(String storageKey);

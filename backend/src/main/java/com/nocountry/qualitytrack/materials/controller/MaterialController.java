@@ -13,16 +13,20 @@ import com.nocountry.qualitytrack.materials.dto.response.MaterialResponse;
 import com.nocountry.qualitytrack.materials.service.MaterialService;
 import com.nocountry.qualitytrack.shared.response.ApiResponse;
 import com.nocountry.qualitytrack.shared.response.ApiSuccessCode;
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -73,6 +77,29 @@ public class MaterialController {
                         "Lote de material creado correctamente.",
                         materialService.createLot(currentUserId, materialId, request)
                 ));
+    }
+
+    @Operation(summary = "Subir o actualizar el certificado de un lote")
+    @PostMapping(
+            value = "/{materialId}/lots/{lotId}/certificate",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<ApiResponse<MaterialLotResponse>> attachCertificate(
+            @CurrentUserId Long currentUserId,
+            @PathVariable Long materialId,
+            @PathVariable Long lotId,
+            @RequestPart("file") MultipartFile file
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                ApiSuccessCode.MATERIAL_LOT_CERTIFICATE_ATTACHED,
+                "Certificado del lote guardado correctamente.",
+                materialService.attachCertificate(
+                        currentUserId,
+                        materialId,
+                        lotId,
+                        file
+                )
+        ));
     }
 
     @ListMaterialLotsApiDocs

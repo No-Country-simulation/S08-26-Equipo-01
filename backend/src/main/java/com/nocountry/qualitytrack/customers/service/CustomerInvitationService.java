@@ -131,6 +131,38 @@ public class CustomerInvitationService {
                 .toList();
     }
 
+    @Transactional
+    public void cancelInvitation(
+            Long currentUserId,
+            Long customerId,
+            Long invitationId
+    ) {
+        requireActiveAdmin(currentUserId, customerId);
+
+        CustomerInvitation invitation = invitationRepository.findByIdForUpdate(invitationId)
+                .orElseThrow(() -> new BusinessException(
+                        ApiErrorCode.RESOURCE_NOT_FOUND,
+                        "No se encontró la invitación."
+                ));
+
+        if (!customerId.equals(invitation.getCustomer().getId())) {
+            throw new BusinessException(
+                    ApiErrorCode.RESOURCE_NOT_FOUND,
+                    "No se encontró la invitación."
+            );
+        }
+
+        if (invitation.getStatus() != CustomerInvitationStatus.PENDING) {
+            throw new BusinessException(
+                    ApiErrorCode.DATA_CONFLICT,
+                    "Solo una invitación pendiente puede cancelarse."
+            );
+        }
+
+        invitation.cancel();
+        invitationRepository.save(invitation);
+    }
+
     @Transactional(readOnly = true)
     public CustomerInvitationPreviewResponse resolveInvitation(CustomerInvitationTokenRequest request) {
         CustomerInvitation invitation = requireAvailableInvitation(request.token());

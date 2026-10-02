@@ -21,6 +21,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -75,6 +76,16 @@ public class CustomerInvitationController {
                 "Invitaciones pendientes consultadas correctamente.",
                 response
         ));
+    }
+
+    @DeleteMapping("/customers/{customerId}/invitations/{invitationId}")
+    public ResponseEntity<Void> cancelInvitation(
+            @CurrentUserId Long currentUserId,
+            @PathVariable Long customerId,
+            @PathVariable Long invitationId
+    ) {
+        invitationService.cancelInvitation(currentUserId, customerId, invitationId);
+        return ResponseEntity.noContent().build();
     }
 
     @ResolveCustomerInvitationApiDocs

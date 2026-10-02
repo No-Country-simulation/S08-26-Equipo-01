@@ -1,6 +1,7 @@
 package com.nocountry.qualitytrack.documents.entity;
 
 import com.nocountry.qualitytrack.documents.enums.DocumentStatus;
+import com.nocountry.qualitytrack.materials.entity.MaterialLot;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.users.entity.User;
 import jakarta.persistence.Column;
@@ -32,9 +33,13 @@ public class Document {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "case_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "case_id")
     private JobCase jobCase;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "material_lot_id")
+    private MaterialLot materialLot;
 
     @Column(name = "document_type", nullable = false, length = 50)
     private String documentType;
@@ -66,12 +71,20 @@ public class Document {
 
     private Document(
             JobCase jobCase,
+            MaterialLot materialLot,
             String documentType,
             String name,
             String description,
             User createdBy
     ) {
-        this.jobCase = Objects.requireNonNull(jobCase);
+        if ((jobCase == null) == (materialLot == null)) {
+            throw new IllegalArgumentException(
+                    "El documento debe pertenecer exactamente a un expediente o a un lote."
+            );
+        }
+
+        this.jobCase = jobCase;
+        this.materialLot = materialLot;
         this.documentType = Objects.requireNonNull(documentType);
         this.name = Objects.requireNonNull(name);
         this.description = description;
@@ -86,7 +99,31 @@ public class Document {
             String description,
             User createdBy
     ) {
-        return new Document(jobCase, documentType, name, description, createdBy);
+        return new Document(
+                Objects.requireNonNull(jobCase),
+                null,
+                documentType,
+                name,
+                description,
+                createdBy
+        );
+    }
+
+    public static Document createForMaterialLot(
+            MaterialLot materialLot,
+            String documentType,
+            String name,
+            String description,
+            User createdBy
+    ) {
+        return new Document(
+                null,
+                Objects.requireNonNull(materialLot),
+                documentType,
+                name,
+                description,
+                createdBy
+        );
     }
 
     public void remove(User removedBy, Instant removedAt) {
@@ -101,5 +138,13 @@ public class Document {
 
     public boolean isActive() {
         return status == DocumentStatus.ACTIVE;
+    }
+
+    public boolean belongsToCase() {
+        return jobCase != null;
+    }
+
+    public boolean belongsToMaterialLot() {
+        return materialLot != null;
     }
 }

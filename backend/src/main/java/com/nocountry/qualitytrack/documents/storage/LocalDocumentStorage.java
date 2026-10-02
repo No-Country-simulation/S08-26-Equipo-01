@@ -45,6 +45,36 @@ public class LocalDocumentStorage implements DocumentStorage {
                 .resolve("customer-" + customerId)
                 .resolve("case-" + caseId)
                 .normalize();
+
+        return storeIn(directory, version, inputStream);
+    }
+
+    @Override
+    public StoredDocumentFile storeMaterialLot(
+            Long materialId,
+            Long materialLotId,
+            Integer version,
+            String fileName,
+            InputStream inputStream
+    ) {
+        Path directory = root
+                .resolve("materials")
+                .resolve("material-" + materialId)
+                .resolve("lot-" + materialLotId)
+                .normalize();
+
+        return storeIn(directory, version, inputStream);
+    }
+
+    private StoredDocumentFile storeIn(
+            Path directory,
+            Integer version,
+            InputStream inputStream
+    ) {
+        if (version == null || version < 1) {
+            throw new DocumentStorageException("La versión del documento no es válida.");
+        }
+
         Path target = directory.resolve(
                 "v" + version + "-" + UUID.randomUUID()
         ).normalize();

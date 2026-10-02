@@ -59,6 +59,7 @@ public record JobCaseResponse(
             MaterialRequirementType materialRequirementType,
             String materialRequirement,
             LocalDate requestedDeliveryDate,
+            RequestDeliveryDestinationResponse deliveryDestination,
             Long requestedByUserId,
             String requestedByName,
             Instant submittedAt
@@ -76,6 +77,7 @@ public record JobCaseResponse(
                     request.getMaterialRequirementType(),
                     request.getMaterialRequirement(),
                     request.getRequestedDeliveryDate(),
+                    RequestDeliveryDestinationResponse.from(request.getDeliveryDestination()),
                     request.getRequestedByUser().getId(),
                     request.getRequestedByUser().getFirstName() + " " + request.getRequestedByUser().getLastName(),
                     request.getCreatedAt()

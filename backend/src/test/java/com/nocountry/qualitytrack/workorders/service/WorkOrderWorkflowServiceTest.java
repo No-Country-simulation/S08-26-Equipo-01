@@ -344,6 +344,7 @@ class WorkOrderWorkflowServiceTest {
         );
         jobCase.takeForReview(commercialUser, Instant.parse("2026-09-20T19:00:00Z"));
         jobCase.markReadyForQuotation();
+        jobCase.markAwaitingWorkOrder();
         ReflectionTestUtils.setField(jobCase, "id", 3L);
         return jobCase;
     }

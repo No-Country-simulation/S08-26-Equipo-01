@@ -69,17 +69,19 @@ class DocumentCenterRepositoryIntegrationTest {
                 fixture.internalUserId()
         );
 
-        DocumentFixture certificate = createDocument(
-                fixture,
+        Long materialId = insertMaterial("MAT-CENTER");
+        Long materialLotId = insertMaterialLot(
+                materialId,
+                null
+        );
+        DocumentFixture certificate = createMaterialLotDocument(
+                materialLotId,
+                fixture.internalUserId(),
                 "MATERIAL_CERTIFICATE",
                 "Certificado de material",
                 "certificate"
         );
-        Long materialId = insertMaterial("MAT-CENTER");
-        Long materialLotId = insertMaterialLot(
-                materialId,
-                certificate.versionId()
-        );
+        attachCertificateVersion(materialLotId, certificate.versionId());
         insertConsumption(
                 fixture.workOrderId(),
                 materialLotId,
@@ -133,6 +135,12 @@ class DocumentCenterRepositoryIntegrationTest {
                 certificate.versionId(),
                 materialReferences.get(0).getCertificateDocumentVersion().getId()
         );
+        assertEquals(materialLotId, documents.stream()
+                .filter(document -> document.getId().equals(certificate.documentId()))
+                .findFirst()
+                .orElseThrow()
+                .getMaterialLot()
+                .getId());
 
         var deliveryReferences = deliveryRepository
                 .findAllByEvidenceDocumentVersion_Document_IdOrderByIdAsc(
@@ -147,7 +155,7 @@ class DocumentCenterRepositoryIntegrationTest {
     }
 
     @Test
-    void sharedMaterialLotKeepsCertificateSourceCaseProvenance() {
+    void legacyCaseOwnedCertificateRemainsSearchableThroughConsumedLot() {
         Fixture source = createFixture("source-case");
         Fixture consumer = createFixture("consumer-case");
 
@@ -368,6 +376,56 @@ class DocumentCenterRepositoryIntegrationTest {
         );
 
         return new DocumentFixture(documentId, versionId);
+    }
+
+    private DocumentFixture createMaterialLotDocument(
+            Long materialLotId,
+            Long userId,
+            String documentType,
+            String name,
+            String suffix
+    ) {
+        Long documentId = jdbcTemplate.queryForObject(
+                """
+                INSERT INTO documents (
+                    material_lot_id,
+                    document_type,
+                    name,
+                    created_by_user_id
+                )
+                VALUES (?, ?, ?, ?)
+                RETURNING id
+                """,
+                Long.class,
+                materialLotId,
+                documentType,
+                name,
+                userId
+        );
+
+        Long versionId = addVersion(
+                documentId,
+                userId,
+                1,
+                suffix + "-v1"
+        );
+
+        return new DocumentFixture(documentId, versionId);
+    }
+
+    private void attachCertificateVersion(
+            Long materialLotId,
+            Long certificateVersionId
+    ) {
+        jdbcTemplate.update(
+                """
+                UPDATE material_lots
+                SET certificate_document_version_id = ?
+                WHERE id = ?
+                """,
+                certificateVersionId,
+                materialLotId
+        );
     }
 
     private Long addVersion(

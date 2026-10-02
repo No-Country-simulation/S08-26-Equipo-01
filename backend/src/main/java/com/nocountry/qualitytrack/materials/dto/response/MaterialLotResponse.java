@@ -14,7 +14,9 @@ public record MaterialLotResponse(
         String supplier,
         Instant receivedAt,
         BigDecimal quantityReceived,
+        Long certificateDocumentId,
         Long certificateDocumentVersionId,
+        String certificateFileName,
         Instant createdAt
 ) {
     public static MaterialLotResponse from(MaterialLot lot) {
@@ -29,7 +31,13 @@ public record MaterialLotResponse(
                 lot.getQuantityReceived(),
                 lot.getCertificateDocumentVersion() == null
                         ? null
+                        : lot.getCertificateDocumentVersion().getDocument().getId(),
+                lot.getCertificateDocumentVersion() == null
+                        ? null
                         : lot.getCertificateDocumentVersion().getId(),
+                lot.getCertificateDocumentVersion() == null
+                        ? null
+                        : lot.getCertificateDocumentVersion().getFileName(),
                 lot.getCreatedAt()
         );
     }

@@ -41,4 +41,32 @@ class LocalDocumentStorageTest {
         storage.deleteQuietly(stored.storageKey());
         assertFalse(resource.exists());
     }
+    @Test
+    void storesMaterialLotFileOutsideCustomerCaseTree() throws Exception {
+        LocalDocumentStorage storage = new LocalDocumentStorage(tempDir.toString());
+        byte[] content = "certificado-lote".getBytes(StandardCharsets.UTF_8);
+
+        StoredDocumentFile stored = storage.storeMaterialLot(
+                30L,
+                40L,
+                1,
+                "certificado.pdf",
+                new ByteArrayInputStream(content)
+        );
+
+        assertTrue(
+                stored.storageKey().startsWith(
+                        "materials/material-30/lot-40/"
+                )
+        );
+        Resource resource = storage.load(stored.storageKey());
+        assertEquals(
+                "certificado-lote",
+                new String(
+                        resource.getInputStream().readAllBytes(),
+                        StandardCharsets.UTF_8
+                )
+        );
+    }
+
 }

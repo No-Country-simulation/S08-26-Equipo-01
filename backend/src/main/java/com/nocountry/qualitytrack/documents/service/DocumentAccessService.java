@@ -47,6 +47,30 @@ public class DocumentAccessService {
         return user;
     }
 
+    public User requireMaterialCertificateWriter(Long userId) {
+        User user = requireUser(userId);
+        if (user.getAccountType() != AccountType.INTERNAL) {
+            throw new BusinessException(
+                    ApiErrorCode.ACCESS_DENIED,
+                    "Solo usuarios internos pueden gestionar certificados de material."
+            );
+        }
+
+        boolean allowed = userSystemRoleRepository.findAllByIdUserId(userId)
+                .stream()
+                .map(UserSystemRole::getRole)
+                .anyMatch(role -> role == SystemRole.ADMIN || role == SystemRole.PRODUCTION);
+
+        if (!allowed) {
+            throw new BusinessException(
+                    ApiErrorCode.ACCESS_DENIED,
+                    "Tu rol interno no permite gestionar certificados de material."
+            );
+        }
+
+        return user;
+    }
+
     public User requireCanCreate(Long userId, JobCase jobCase) {
         User user = requireUser(userId);
 
@@ -272,6 +296,7 @@ public class DocumentAccessService {
     private void requireOpenForCustomerWrite(JobCase jobCase) {
         if (jobCase.getStatus() == JobCaseStatus.READY_FOR_QUOTATION
                 || jobCase.getStatus() == JobCaseStatus.IN_PRODUCTION
+                || jobCase.getStatus() == JobCaseStatus.COMPLETED
                 || jobCase.getStatus() == JobCaseStatus.CANCELLED) {
             throw new BusinessException(
                     ApiErrorCode.DATA_CONFLICT,

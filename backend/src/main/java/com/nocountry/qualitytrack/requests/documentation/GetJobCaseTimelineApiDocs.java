@@ -19,15 +19,23 @@ import java.lang.annotation.Target;
 @Documented
 @Operation(
         summary = "Consultar historial del expediente",
-        description = "Devuelve en orden cronológico los eventos de negocio registrados para el expediente, como cambios de estado, inicio de revisión, aclaraciones y movimientos de documentos. Cada evento puede incluir el usuario que realizó la acción, la transición de estado y metadata de contexto para que el frontend construya una línea de tiempo legible. Es una consulta de solo lectura y no modifica el JobCase. Solo los usuarios internos con acceso a expedientes pueden consultarla."
+        description = "Devuelve los eventos de negocio del expediente del más reciente al más antiguo mediante paginación por cursor. El parámetro limit admite de 1 a 50 elementos y cursor permite continuar desde la página anterior sin depender de offsets. Cada evento puede incluir usuario, transición de estado y metadata de contexto. Es una consulta de solo lectura y solo los usuarios internos con acceso a expedientes pueden consultarla."
 )
 @ApiResponses({
         @ApiResponse(
                 responseCode = "200",
-                description = "Historial cronológico del expediente consultado correctamente",
+                description = "Página del historial del expediente consultada correctamente",
                 content = @Content(
                         mediaType = "application/json",
                         schema = @Schema(implementation = com.nocountry.qualitytrack.shared.response.ApiResponse.class)
+                )
+        ),
+        @ApiResponse(
+                responseCode = "400",
+                description = "El límite está fuera del rango permitido o el cursor no es válido",
+                content = @Content(
+                        mediaType = "application/problem+json",
+                        schema = @Schema(implementation = ProblemDetail.class)
                 )
         ),
         @ApiResponse(

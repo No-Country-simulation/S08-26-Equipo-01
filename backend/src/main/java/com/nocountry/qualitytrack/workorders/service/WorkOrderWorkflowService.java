@@ -51,8 +51,8 @@ public class WorkOrderWorkflowService {
         User actor = accessPolicy.requireCreationActor(currentUserId);
         JobCase jobCase = requireCaseForUpdate(caseId);
 
-        if (jobCase.getStatus() != JobCaseStatus.READY_FOR_QUOTATION) {
-            conflict("La orden de trabajo solo puede crearse desde un expediente READY_FOR_QUOTATION.");
+        if (jobCase.getStatus() != JobCaseStatus.AWAITING_WORK_ORDER) {
+            conflict("La orden de trabajo solo puede crearse desde un expediente AWAITING_WORK_ORDER.");
         }
         if (workOrderRepository.existsByJobCase_Id(caseId)) {
             conflict("El expediente ya tiene una orden de trabajo.");

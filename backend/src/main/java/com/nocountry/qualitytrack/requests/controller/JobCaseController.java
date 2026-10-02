@@ -19,7 +19,7 @@ import com.nocountry.qualitytrack.requests.service.JobCaseService;
 import com.nocountry.qualitytrack.requests.service.JobCaseWorkflowService;
 import com.nocountry.qualitytrack.shared.response.ApiResponse;
 import com.nocountry.qualitytrack.shared.response.ApiSuccessCode;
-import com.nocountry.qualitytrack.traceability.dto.response.TraceabilityEventResponse;
+import com.nocountry.qualitytrack.traceability.dto.response.TraceabilityTimelinePageResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -30,6 +30,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
@@ -145,11 +146,18 @@ public class JobCaseController {
 
     @GetJobCaseTimelineApiDocs
     @GetMapping("/{caseId}/timeline")
-    public ResponseEntity<ApiResponse<List<TraceabilityEventResponse>>> timeline(
+    public ResponseEntity<ApiResponse<TraceabilityTimelinePageResponse>> timeline(
             @CurrentUserId Long currentUserId,
-            @PathVariable Long caseId
+            @PathVariable Long caseId,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String cursor
     ) {
-        List<TraceabilityEventResponse> response = jobCaseService.timeline(currentUserId, caseId);
+        TraceabilityTimelinePageResponse response = jobCaseService.timeline(
+                currentUserId,
+                caseId,
+                limit,
+                cursor
+        );
 
         return ResponseEntity.ok(ApiResponse.success(
                 ApiSuccessCode.JOB_CASE_TIMELINE_RETRIEVED,

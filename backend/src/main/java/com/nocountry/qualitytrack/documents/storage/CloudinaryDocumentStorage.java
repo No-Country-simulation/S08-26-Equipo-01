@@ -39,10 +39,8 @@ public class CloudinaryDocumentStorage implements DocumentStorage {
             );
         }
 
-        String normalizedCloudinaryUrl = cloudinaryUrl.trim();
-
         try {
-            this.cloudinary = new Cloudinary(normalizedCloudinaryUrl);
+            this.cloudinary = new Cloudinary(cloudinaryUrl.trim());
         } catch (RuntimeException exception) {
             throw new IllegalStateException(
                     "CLOUDINARY_URL no tiene una configuración válida.",
@@ -59,10 +57,51 @@ public class CloudinaryDocumentStorage implements DocumentStorage {
             String fileName,
             InputStream inputStream
     ) {
+        if (customerId == null || caseId == null) {
+            throw new DocumentStorageException(
+                    "El documento de expediente debe pertenecer a una empresa y a un expediente."
+            );
+        }
+
+        return storeIn(
+                "qualitytrack/" + customerId + "/case-" + caseId,
+                version,
+                fileName,
+                inputStream
+        );
+    }
+
+    @Override
+    public StoredDocumentFile storeMaterialLot(
+            Long materialId,
+            Long materialLotId,
+            Integer version,
+            String fileName,
+            InputStream inputStream
+    ) {
+        if (materialId == null || materialLotId == null) {
+            throw new DocumentStorageException(
+                    "El certificado debe pertenecer a un material y a un lote."
+            );
+        }
+
+        return storeIn(
+                "qualitytrack/materials/material-" + materialId + "/lot-" + materialLotId,
+                version,
+                fileName,
+                inputStream
+        );
+    }
+
+    private StoredDocumentFile storeIn(
+            String folder,
+            Integer version,
+            String fileName,
+            InputStream inputStream
+    ) {
         try {
             byte[] content = inputStream.readAllBytes();
             String checksum = sha256(content);
-            String folder = buildFolder(customerId, caseId);
             String publicId = buildPublicId(version, fileName);
 
             Map<?, ?> result = cloudinary.uploader().upload(
@@ -142,16 +181,6 @@ public class CloudinaryDocumentStorage implements DocumentStorage {
         } catch (Exception ignored) {
             // Cleanup must never mask the original transaction failure.
         }
-    }
-
-    private String buildFolder(Long customerId, Long caseId) {
-        if (customerId == null || caseId == null) {
-            throw new DocumentStorageException(
-                    "El documento debe pertenecer a una empresa y a un expediente."
-            );
-        }
-
-        return "qualitytrack/" + customerId + "/case-" + caseId;
     }
 
     private String buildPublicId(Integer version, String fileName) {

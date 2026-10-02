@@ -13,6 +13,7 @@ import com.nocountry.qualitytrack.shared.response.ApiSuccessCode;
 import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -20,7 +21,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestPart;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/deliveries")
@@ -29,6 +34,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class DeliveryController {
 
     private final DeliveryService deliveryService;
+
+    @Operation(summary = "Listar entregas para operación interna")
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<DeliveryResponse>>> list(
+            @CurrentUserId Long currentUserId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                ApiSuccessCode.DELIVERIES_RETRIEVED,
+                "Entregas consultadas correctamente.",
+                deliveryService.listAll(currentUserId)
+        ));
+    }
 
     @Operation(summary = "Consultar una entrega")
     @GetMapping("/{deliveryId}")
@@ -68,6 +85,23 @@ public class DeliveryController {
                 ApiSuccessCode.DELIVERY_DELIVERED,
                 "Entrega registrada como entregada.",
                 deliveryService.deliver(currentUserId, deliveryId, request)
+        ));
+    }
+
+    @Operation(summary = "Subir o actualizar la evidencia documental de una entrega")
+    @PostMapping(
+            value = "/{deliveryId}/evidence-file",
+            consumes = MediaType.MULTIPART_FORM_DATA_VALUE
+    )
+    public ResponseEntity<ApiResponse<DeliveryResponse>> uploadEvidence(
+            @CurrentUserId Long currentUserId,
+            @PathVariable Long deliveryId,
+            @RequestPart("file") MultipartFile file
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                ApiSuccessCode.DELIVERY_EVIDENCE_ATTACHED,
+                "Evidencia guardada y vinculada correctamente.",
+                deliveryService.uploadEvidence(currentUserId, deliveryId, file)
         ));
     }
 

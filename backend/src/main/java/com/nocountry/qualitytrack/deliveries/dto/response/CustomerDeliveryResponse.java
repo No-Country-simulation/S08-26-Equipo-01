@@ -9,12 +9,14 @@ public record CustomerDeliveryResponse(
         String workOrderNumber,
         Integer quantity,
         DeliveryStatus status,
-        String destinationRecipientName,
+        String destinationLabel,
+        String destinationContactName,
         String destinationAddress,
         String destinationCity,
         String destinationState,
         String destinationPostalCode,
         String destinationCountry,
+        String destinationInstructions,
         String deliveryMethod,
         String carrier,
         String trackingNumber,
@@ -22,7 +24,8 @@ public record CustomerDeliveryResponse(
         Instant deliveredAt,
         String receivedByName,
         Long evidenceDocumentId,
-        Long evidenceDocumentVersionId
+        Long evidenceDocumentVersionId,
+        String evidenceFileName
 ) {
     public static CustomerDeliveryResponse from(DeliveryResponse delivery) {
         return new CustomerDeliveryResponse(
@@ -30,12 +33,14 @@ public record CustomerDeliveryResponse(
                 delivery.workOrderNumber(),
                 delivery.quantity(),
                 delivery.status(),
-                delivery.destinationRecipientName(),
+                delivery.destinationLabel(),
+                delivery.destinationContactName(),
                 delivery.destinationAddress(),
                 delivery.destinationCity(),
                 delivery.destinationState(),
                 delivery.destinationPostalCode(),
                 delivery.destinationCountry(),
+                delivery.destinationInstructions(),
                 delivery.deliveryMethod(),
                 delivery.carrier(),
                 delivery.trackingNumber(),
@@ -43,7 +48,8 @@ public record CustomerDeliveryResponse(
                 delivery.deliveredAt(),
                 delivery.receivedByName(),
                 delivery.evidenceDocumentId(),
-                delivery.evidenceDocumentVersionId()
+                delivery.evidenceDocumentVersionId(),
+                delivery.evidenceFileName()
         );
     }
 }

@@ -105,6 +105,14 @@ public class CustomerInvitation {
         }
     }
 
+    public void cancel() {
+        if (status != CustomerInvitationStatus.PENDING) {
+            throw new IllegalStateException("Solo una invitación pendiente puede cancelarse.");
+        }
+
+        status = CustomerInvitationStatus.CANCELLED;
+    }
+
     public void accept(User acceptedByUser, Instant acceptedAt) {
         if (status != CustomerInvitationStatus.PENDING) {
             throw new IllegalStateException("Solo una invitación pendiente puede aceptarse.");

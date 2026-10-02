@@ -12,6 +12,7 @@ public record JobCaseSummaryResponse(
         String assignedToName,
         Instant assignedAt,
         Instant openedAt,
+        Instant closedAt,
         Long cancelledByUserId,
         Instant cancelledAt,
         String cancellationReason
@@ -29,6 +30,7 @@ public record JobCaseSummaryResponse(
                         ),
                 jobCase.getAssignedAt(),
                 jobCase.getOpenedAt(),
+                jobCase.getClosedAt(),
                 jobCase.getCancelledByUser() == null ? null : jobCase.getCancelledByUser().getId(),
                 jobCase.getCancelledAt(),
                 jobCase.getCancellationReason()

@@ -147,6 +147,37 @@ class TraceabilityActionResolverTest {
     }
 
     @Test
+    void qualityCheckEventExposesInspectionAndCheckActions() {
+        TraceabilityEventResponse event = new TraceabilityEventResponse(
+                106L,
+                TraceabilityAggregateType.QUALITY_CHECK,
+                70L,
+                TraceabilityEventType.QUALITY_CHECK_RECORDED,
+                null,
+                "PASS",
+                10L,
+                "Ana López",
+                Map.of(
+                        "qualityInspectionId", 30L,
+                        "qualityCheckId", 70L,
+                        "checkType", "PASS_FAIL"
+                ),
+                Instant.parse("2026-09-28T19:20:00Z")
+        );
+
+        var actions = resolver.resolve(event);
+
+        assertTrue(actions.stream().anyMatch(action ->
+                action.type() == TraceabilityActionType.VIEW_QUALITY_CHECK
+                        && action.resourceType() == TraceabilityResourceType.QUALITY_CHECK
+                        && action.resourceId().equals(70L)));
+        assertTrue(actions.stream().anyMatch(action ->
+                action.type() == TraceabilityActionType.VIEW_QUALITY_INSPECTION
+                        && action.resourceType() == TraceabilityResourceType.QUALITY_INSPECTION
+                        && action.resourceId().equals(30L)));
+    }
+
+    @Test
     void removedDocumentDoesNotExposeStaleDocumentAction() {
         TraceabilityEventResponse event = new TraceabilityEventResponse(
                 104L,
