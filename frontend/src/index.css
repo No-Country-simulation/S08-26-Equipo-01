@@ -13,6 +13,11 @@
   background: #f8fafc;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
+  --qt-navy: #0f172a;
+  --qt-blue: #2563eb;
+  --qt-green: #10b981;
+  --qt-teal: #0f766e;
+  --qt-surface: #f5f7fb;
 }
 
 * {
@@ -20,10 +25,15 @@
 }
 
 html,
-body {
+body,
+#root {
   min-width: 320px;
   min-height: 100%;
-  background: #f8fafc;
+}
+
+html,
+body {
+  background: var(--qt-surface);
 }
 
 body {
@@ -43,7 +53,160 @@ a {
   -webkit-tap-highlight-color: transparent;
 }
 
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
 :focus-visible {
-  outline: 2px solid #2563eb;
+  outline: 2px solid var(--qt-blue);
   outline-offset: 2px;
+}
+
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  body.printing-customer-quotation {
+    background: #fff !important;
+  }
+
+  body.printing-customer-quotation * {
+    visibility: hidden !important;
+  }
+
+  body.printing-customer-quotation .customer-quotation-print-area,
+  body.printing-customer-quotation .customer-quotation-print-area * {
+    visibility: visible !important;
+  }
+
+  body.printing-customer-quotation .customer-quotation-print-area {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    display: flex !important;
+    min-height: 273mm !important;
+    width: 100% !important;
+    max-width: none !important;
+    flex-direction: column !important;
+    margin: 0 !important;
+    padding: 10mm 11mm 8mm !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body.printing-customer-quotation .quotation-sheet-header {
+    padding-bottom: 6mm !important;
+  }
+
+  body.printing-customer-quotation .quotation-sheet-meta {
+    margin-top: 9mm !important;
+    padding: 5mm !important;
+  }
+
+  body.printing-customer-quotation .quotation-sheet-scope {
+    margin-top: 11mm !important;
+  }
+
+  body.printing-customer-quotation .quotation-sheet-scope > div:last-child {
+    break-inside: avoid;
+  }
+
+  body.printing-customer-quotation .quotation-sheet-bottom {
+    margin-top: auto !important;
+    padding-top: 14mm !important;
+    break-inside: avoid;
+  }
+
+  body.printing-customer-quotation .quotation-sheet-note {
+    margin-top: 10mm !important;
+    padding-top: 4mm !important;
+  }
+
+  body.printing-customer-quotation .customer-quotation-print-hidden {
+    display: none !important;
+  }
+
+  body.printing-job-case {
+    background: #fff !important;
+  }
+
+  body.printing-job-case * {
+    visibility: hidden !important;
+  }
+
+  body.printing-job-case .job-case-print-area,
+  body.printing-job-case .job-case-print-area * {
+    visibility: visible !important;
+  }
+
+  body.printing-job-case .job-case-print-area {
+    position: absolute !important;
+    inset: 0 auto auto 0 !important;
+    display: flex !important;
+    min-height: 273mm !important;
+    width: 100% !important;
+    max-width: none !important;
+    flex-direction: column !important;
+    margin: 0 !important;
+    padding: 10mm 11mm 8mm !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    overflow: visible !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  body.printing-job-case .job-case-print-hidden,
+  body.printing-job-case .job-case-screen-only {
+    display: none !important;
+  }
+
+  body.printing-job-case .job-case-print-only {
+    display: block !important;
+  }
+
+  body.printing-job-case .job-case-sheet-header {
+    padding-bottom: 6mm !important;
+  }
+
+  body.printing-job-case .job-case-sheet-meta {
+    margin-top: 8mm !important;
+    padding: 5mm !important;
+    break-inside: avoid;
+  }
+
+  body.printing-job-case .job-case-sheet-requirement,
+  body.printing-job-case .job-case-sheet-review,
+  body.printing-job-case .job-case-sheet-print-details {
+    margin-top: 8mm !important;
+    break-inside: avoid;
+  }
+
+  body.printing-job-case .job-case-sheet-print-documents,
+  body.printing-job-case .job-case-sheet-print-clarifications {
+    margin-top: 8mm !important;
+  }
+
+  body.printing-job-case .job-case-sheet-print-documents > div:last-child > div,
+  body.printing-job-case .job-case-sheet-print-clarifications > div:last-child > div {
+    break-inside: avoid;
+  }
+
+  body.printing-job-case .job-case-sheet-note {
+    margin-top: 8mm !important;
+    padding-top: 4mm !important;
+  }
 }
