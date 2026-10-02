@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">QualityTrack</title>
+  <circle cx="30" cy="30" r="20" fill="none" stroke="#FFFFFF" stroke-width="9"/>
+  <path d="M39.5 41.5 55 55H42.5L33 46.5Z" fill="#2563EB"/>
+  <path d="m18.5 30.5 8 8L43.5 21.5" fill="none" stroke="#10B981" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
