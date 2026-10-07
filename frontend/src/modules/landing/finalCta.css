@@ -1,0 +1,66 @@
+.qt-final-section {
+  min-height: 100svh;
+}
+
+.qt-final-terminal {
+  position: relative;
+}
+
+.qt-final-terminal::before,
+.qt-final-terminal::after {
+  position: absolute;
+  inset: 50%;
+  width: 1px;
+  height: 42px;
+  content: '';
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    rgba(103, 232, 249, 0.16),
+    transparent
+  );
+}
+
+.qt-final-terminal::before {
+  transform: translate(-50%, -58px);
+}
+
+.qt-final-terminal::after {
+  height: 26px;
+  background: linear-gradient(to bottom, rgba(103, 232, 249, 0.1), transparent);
+  transform: translate(-50%, 24px);
+}
+
+.qt-final-primary {
+  position: relative;
+  overflow: hidden;
+}
+
+.qt-final-primary::after {
+  position: absolute;
+  top: -30%;
+  left: -26%;
+  width: 22%;
+  height: 160%;
+  content: '';
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.2),
+    transparent
+  );
+  transform: rotate(14deg);
+  transition: left 520ms cubic-bezier(0.2, 0.75, 0.2, 1);
+}
+
+.qt-final-primary:hover::after {
+  left: 112%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qt-final-primary,
+  .qt-final-primary::after {
+    transition: none;
+  }
+}

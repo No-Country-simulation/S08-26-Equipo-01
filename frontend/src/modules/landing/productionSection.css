@@ -1,0 +1,312 @@
+.qt-production-section {
+  height: 240svh;
+  min-height: 240svh;
+}
+
+.qt-production-pinned {
+  top: 64px;
+  height: calc(100svh - 64px);
+  min-height: calc(100svh - 64px);
+}
+
+.qt-production-carrier {
+  transition: left 45ms linear;
+}
+
+.qt-production-piece {
+  transform-origin: 50% 50%;
+}
+
+.qt-production-lathe {
+  isolation: isolate;
+}
+
+.qt-production-lathe--active::before,
+.qt-production-lathe--active::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+}
+
+.qt-production-lathe--active::before {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(125, 211, 252, 0.04),
+    transparent
+  );
+  animation: qt-production-lathe-scan 1.9s linear infinite;
+}
+
+.qt-production-lathe--active::after {
+  inset: 28px 34px;
+  border-radius: 999px;
+  border: 1px solid rgba(103, 232, 249, 0.055);
+  animation: qt-production-breathe 1.6s ease-in-out infinite;
+}
+
+.qt-production-workpiece--spinning {
+  animation: qt-production-metal-spin 0.52s linear infinite;
+}
+
+.qt-production-spark {
+  transform: rotate(-18deg) scaleX(0.25);
+  animation: qt-production-spark 0.78s ease-out infinite;
+}
+
+.qt-production-spark--two {
+  transform: rotate(8deg) scaleX(0.22);
+  animation-delay: 0.18s;
+}
+
+.qt-production-spark--three {
+  transform: rotate(22deg) scaleX(0.2);
+  animation-delay: 0.34s;
+}
+
+.qt-production-grind--active::after {
+  position: absolute;
+  inset: 0;
+  content: '';
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(103, 232, 249, 0.035) 45%,
+    transparent 100%
+  );
+  animation: qt-production-grind-sheen 1.55s ease-in-out infinite;
+}
+
+.qt-production-scan {
+  transition: left 45ms linear;
+}
+
+@keyframes qt-production-metal-spin {
+  0% {
+    filter: brightness(0.9);
+    box-shadow:
+      inset 0 5px 5px rgba(255, 255, 255, 0.08),
+      inset 0 -5px 6px rgba(2, 6, 23, 0.42);
+  }
+  50% {
+    filter: brightness(1.18);
+    box-shadow:
+      inset 0 -5px 5px rgba(255, 255, 255, 0.1),
+      inset 0 5px 6px rgba(2, 6, 23, 0.4);
+  }
+  100% {
+    filter: brightness(0.9);
+    box-shadow:
+      inset 0 5px 5px rgba(255, 255, 255, 0.08),
+      inset 0 -5px 6px rgba(2, 6, 23, 0.42);
+  }
+}
+
+@keyframes qt-production-spark {
+  0% {
+    opacity: 0;
+    transform-origin: left center;
+  }
+  18% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(18px, -7px, 0) rotate(-18deg) scaleX(1);
+  }
+}
+
+@keyframes qt-production-lathe-scan {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes qt-production-breathe {
+  0%,
+  100% {
+    opacity: 0.25;
+    transform: scale(0.97);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.02);
+  }
+}
+
+@keyframes qt-production-grind-sheen {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translateX(-70%);
+  }
+  45% {
+    opacity: 0.75;
+  }
+  70% {
+    opacity: 0;
+    transform: translateX(70%);
+  }
+}
+
+@keyframes qt-production-mobile-piece-travel {
+  0%,
+  14% {
+    top: 44px;
+    opacity: 0.2;
+    filter: brightness(0.9);
+  }
+  22% {
+    top: 54px;
+    opacity: 1;
+  }
+  36%,
+  46% {
+    top: 132px;
+    opacity: 1;
+    filter: brightness(1.16);
+  }
+  58%,
+  70% {
+    top: 220px;
+    opacity: 1;
+    filter: brightness(1.05);
+  }
+  82% {
+    top: 284px;
+    opacity: 1;
+  }
+  100% {
+    top: 314px;
+    opacity: 0;
+    filter: brightness(0.92);
+  }
+}
+
+@keyframes qt-production-mobile-piece-glow {
+  0%,
+  100% {
+    opacity: 0.22;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 0.85;
+    transform: scale(1.18);
+  }
+}
+
+@media (min-width: 1024px) {
+  .qt-production-section {
+    height: 260svh;
+    min-height: 260svh;
+  }
+
+  .qt-production-pinned {
+    top: 72px;
+    height: calc(100svh - 72px);
+    min-height: calc(100svh - 72px);
+  }
+}
+
+@media (max-width: 1023px) {
+  .qt-production-carrier,
+  .qt-production-scan {
+    transition: none;
+  }
+
+  .qt-production-pinned [class~='lg:hidden'][class*='h-[370px]'] {
+    isolation: isolate;
+  }
+
+  .qt-production-pinned [class~='lg:hidden'][class*='h-[370px]']::before {
+    position: absolute;
+    z-index: 18;
+    left: 2px;
+    top: 44px;
+    width: 44px;
+    height: 14px;
+    content: '';
+    pointer-events: none;
+    border: 1px solid rgba(186, 230, 253, 0.48);
+    border-radius: 999px;
+    background: linear-gradient(
+      180deg,
+      #d4e4ec 0%,
+      #7695a7 30%,
+      #234055 58%,
+      #8eacba 82%,
+      #d1e3ea 100%
+    );
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.38),
+      0 0 18px rgba(56, 189, 248, 0.42),
+      0 0 36px rgba(34, 211, 238, 0.14);
+    animation: qt-production-mobile-piece-travel 5.4s ease-in-out infinite;
+  }
+
+  .qt-production-pinned [class~='lg:hidden'][class*='h-[370px]']::after {
+    position: absolute;
+    z-index: 17;
+    left: 8px;
+    top: 48px;
+    width: 32px;
+    height: 8px;
+    content: '';
+    pointer-events: none;
+    border-radius: 999px;
+    background: rgba(103, 232, 249, 0.24);
+    filter: blur(9px);
+    animation:
+      qt-production-mobile-piece-travel 5.4s ease-in-out infinite,
+      qt-production-mobile-piece-glow 1.1s ease-in-out infinite;
+  }
+
+  .qt-production-pinned [class~='lg:hidden'][class*='h-[370px]'] > .space-y-3 {
+    position: relative;
+    z-index: 4;
+  }
+
+  .qt-production-pinned
+    [class~='lg:hidden'][class*='h-[370px]']
+    > .absolute.inset-0.grid.place-items-center {
+    z-index: 28;
+    pointer-events: none;
+    background:
+      radial-gradient(
+        circle at 50% 46%,
+        rgba(14, 165, 233, 0.12),
+        transparent 42%
+      ),
+      rgba(2, 8, 23, 0.985);
+    backdrop-filter: blur(10px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qt-production-section {
+    height: auto;
+    min-height: 100svh;
+  }
+
+  .qt-production-pinned {
+    position: relative;
+    top: 0;
+    height: auto;
+    min-height: 100svh;
+  }
+
+  .qt-production-workpiece--spinning,
+  .qt-production-spark,
+  .qt-production-lathe--active::before,
+  .qt-production-lathe--active::after,
+  .qt-production-grind--active::after,
+  .qt-production-pinned [class~='lg:hidden'][class*='h-[370px]']::before,
+  .qt-production-pinned [class~='lg:hidden'][class*='h-[370px]']::after {
+    animation: none !important;
+  }
+}
