@@ -1,0 +1,411 @@
+html {
+  scroll-behavior: smooth;
+}
+
+.qt-story {
+  min-height: 800vh;
+}
+
+.qt-story-backdrop {
+  background:
+    radial-gradient(circle at 68% 45%, rgba(37, 99, 235, 0.21), transparent 30%),
+    radial-gradient(circle at 52% 70%, rgba(14, 165, 233, 0.1), transparent 26%),
+    linear-gradient(180deg, #020617 0%, #071127 48%, #020617 100%);
+}
+
+.qt-story-backdrop::before {
+  position: absolute;
+  inset: 0;
+  content: '';
+  opacity: 0.2;
+  background-image:
+    linear-gradient(rgba(148, 163, 184, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148, 163, 184, 0.08) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(circle at 62% 52%, black 0%, transparent 72%);
+}
+
+.qt-story-copy {
+  opacity: 0.18;
+  transform: translate3d(0, 28px, 0) scale(0.985);
+  filter: blur(1.2px);
+  transition:
+    opacity 420ms ease,
+    transform 520ms cubic-bezier(0.2, 0.75, 0.2, 1),
+    filter 420ms ease;
+}
+
+.qt-story-copy-active {
+  opacity: 1;
+  transform: translate3d(0, 0, 0) scale(1);
+  filter: blur(0);
+}
+
+.qt-capability-card {
+  transform: translateZ(0);
+  transition:
+    transform 380ms cubic-bezier(0.2, 0.75, 0.2, 1),
+    border-color 300ms ease,
+    box-shadow 380ms ease;
+}
+
+.qt-capability-card:hover {
+  transform: translateY(-5px) perspective(900px) rotateX(1deg);
+  border-color: rgba(96, 165, 250, 0.35);
+  box-shadow: 0 28px 70px -48px rgba(37, 99, 235, 0.55);
+}
+
+.qt-final-glow {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(37, 99, 235, 0.16), transparent 36%),
+    radial-gradient(circle at 15% 80%, rgba(14, 165, 233, 0.08), transparent 25%);
+}
+
+.qt-css-scene-shell {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  perspective: 1050px;
+  perspective-origin: 62% 46%;
+}
+
+.qt-css-scene-shell::before {
+  position: absolute;
+  width: min(58vw, 760px);
+  height: min(58vw, 760px);
+  content: '';
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.22), transparent 64%);
+  filter: blur(20px);
+}
+
+.qt-css-scene {
+  position: relative;
+  width: min(70vw, 850px);
+  height: 430px;
+  margin-left: min(19vw, 220px);
+  transform-style: preserve-3d;
+  transform: rotateX(-9deg) rotateY(-17deg);
+  transition: transform 180ms linear;
+}
+
+.qt-css-cuboid {
+  --qt-w: 100px;
+  --qt-h: 100px;
+  --qt-d: 100px;
+  position: absolute;
+  width: var(--qt-w);
+  height: var(--qt-h);
+  transform-style: preserve-3d;
+}
+
+.qt-css-face {
+  position: absolute;
+  inset: 0;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(145deg, rgba(51, 65, 85, 0.96), rgba(15, 23, 42, 0.9));
+  box-shadow: inset 0 0 28px rgba(96, 165, 250, 0.06);
+  backface-visibility: hidden;
+}
+
+.qt-css-face-front {
+  transform: translateZ(calc(var(--qt-d) / 2));
+}
+
+.qt-css-face-back {
+  transform: rotateY(180deg) translateZ(calc(var(--qt-d) / 2));
+}
+
+.qt-css-face-left,
+.qt-css-face-right {
+  left: calc((var(--qt-w) - var(--qt-d)) / 2);
+  width: var(--qt-d);
+}
+
+.qt-css-face-left {
+  transform: rotateY(-90deg) translateZ(calc(var(--qt-w) / 2));
+}
+
+.qt-css-face-right {
+  transform: rotateY(90deg) translateZ(calc(var(--qt-w) / 2));
+}
+
+.qt-css-face-top,
+.qt-css-face-bottom {
+  top: calc((var(--qt-h) - var(--qt-d)) / 2);
+  height: var(--qt-d);
+}
+
+.qt-css-face-top {
+  background: linear-gradient(145deg, rgba(71, 85, 105, 0.98), rgba(30, 41, 59, 0.92));
+  transform: rotateX(90deg) translateZ(calc(var(--qt-h) / 2));
+}
+
+.qt-css-face-bottom {
+  transform: rotateX(-90deg) translateZ(calc(var(--qt-h) / 2));
+}
+
+.qt-css-floor {
+  --qt-w: 720px;
+  --qt-h: 22px;
+  --qt-d: 220px;
+  left: 40px;
+  top: 305px;
+  transform: translateZ(-25px);
+}
+
+.qt-css-machine-base {
+  --qt-w: 270px;
+  --qt-h: 48px;
+  --qt-d: 190px;
+  left: 230px;
+  top: 250px;
+}
+
+.qt-css-machine-left,
+.qt-css-machine-right {
+  --qt-w: 34px;
+  --qt-h: 205px;
+  --qt-d: 42px;
+  top: 72px;
+}
+
+.qt-css-machine-left {
+  left: 244px;
+}
+
+.qt-css-machine-right {
+  left: 456px;
+}
+
+.qt-css-machine-top {
+  --qt-w: 246px;
+  --qt-h: 32px;
+  --qt-d: 54px;
+  left: 244px;
+  top: 52px;
+}
+
+.qt-css-tool {
+  --qt-w: 28px;
+  --qt-h: 124px;
+  --qt-d: 28px;
+  left: 352px;
+  top: 83px;
+  animation: qt-tool-work 1.7s ease-in-out infinite alternate;
+}
+
+.qt-css-tool .qt-css-face {
+  border-color: rgba(96, 165, 250, 0.3);
+  background: linear-gradient(145deg, #64748b, #1e293b);
+}
+
+.qt-css-conveyor {
+  --qt-w: 300px;
+  --qt-h: 34px;
+  --qt-d: 140px;
+  left: 485px;
+  top: 265px;
+}
+
+.qt-css-part {
+  position: absolute;
+  left: 350px;
+  top: 226px;
+  width: 130px;
+  height: 46px;
+  transform-style: preserve-3d;
+  transition: transform 120ms linear;
+}
+
+.qt-css-part-core {
+  position: absolute;
+  inset: 4px 0;
+  border: 1px solid rgba(191, 219, 254, 0.42);
+  border-radius: 999px;
+  background: linear-gradient(180deg, #94a3b8, #334155 44%, #0f172a 100%);
+  box-shadow:
+    inset 0 9px 12px rgba(255, 255, 255, 0.16),
+    0 0 34px rgba(56, 189, 248, 0.2);
+}
+
+.qt-css-part-ring {
+  position: absolute;
+  top: -2px;
+  width: 20px;
+  height: 50px;
+  border: 3px solid rgba(125, 211, 252, 0.85);
+  border-radius: 50%;
+  box-shadow: 0 0 18px rgba(14, 165, 233, 0.45);
+}
+
+.qt-css-part-ring-a {
+  left: 4px;
+}
+
+.qt-css-part-ring-b {
+  right: 4px;
+}
+
+.qt-css-scanner {
+  position: absolute;
+  left: 515px;
+  top: 96px;
+  width: 160px;
+  height: 190px;
+  transform-style: preserve-3d;
+  transition: transform 120ms linear;
+}
+
+.qt-css-scanner-left,
+.qt-css-scanner-right {
+  --qt-w: 24px;
+  --qt-h: 178px;
+  --qt-d: 28px;
+  top: 0;
+}
+
+.qt-css-scanner-left {
+  left: 0;
+}
+
+.qt-css-scanner-right {
+  right: 0;
+}
+
+.qt-css-scanner-top {
+  --qt-w: 160px;
+  --qt-h: 24px;
+  --qt-d: 28px;
+  left: 0;
+  top: 0;
+}
+
+.qt-css-scanner .qt-css-face {
+  border-color: rgba(52, 211, 153, 0.28);
+  background: linear-gradient(145deg, rgba(6, 78, 59, 0.98), rgba(15, 23, 42, 0.96));
+}
+
+.qt-css-scan-plane {
+  position: absolute;
+  left: 18px;
+  top: 34px;
+  width: 124px;
+  height: 126px;
+  border: 1px solid rgba(52, 211, 153, 0.45);
+  background: linear-gradient(90deg, transparent, rgba(52, 211, 153, 0.22), transparent);
+  box-shadow: 0 0 28px rgba(52, 211, 153, 0.16);
+  animation: qt-scan 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes qt-tool-work {
+  to {
+    transform: translateY(44px) translateZ(8px);
+  }
+}
+
+@keyframes qt-scan {
+  from {
+    transform: translateZ(-48px);
+    opacity: 0.25;
+  }
+  to {
+    transform: translateZ(48px);
+    opacity: 0.9;
+  }
+}
+
+.qt-scene-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+}
+
+.qt-scene-fallback-core {
+  display: grid;
+  width: 94px;
+  height: 94px;
+  place-items: center;
+  border: 1px solid rgba(96, 165, 250, 0.28);
+  border-radius: 28px;
+  background: rgba(37, 99, 235, 0.12);
+  color: #bfdbfe;
+  font-size: 22px;
+  font-weight: 800;
+  box-shadow: 0 0 70px rgba(37, 99, 235, 0.18);
+}
+
+.qt-scene-fallback-orbit {
+  position: absolute;
+  width: min(48vw, 540px);
+  aspect-ratio: 1;
+  border: 1px solid rgba(96, 165, 250, 0.13);
+  border-radius: 999px;
+  animation: qt-orbit 14s linear infinite;
+}
+
+.qt-scene-fallback-orbit-b {
+  width: min(35vw, 390px);
+  border-color: rgba(52, 211, 153, 0.1);
+  animation-direction: reverse;
+  animation-duration: 9s;
+}
+
+.qt-scene-fallback-orbit::after {
+  position: absolute;
+  top: 48%;
+  left: -4px;
+  width: 8px;
+  height: 8px;
+  content: '';
+  border-radius: 50%;
+  background: #60a5fa;
+  box-shadow: 0 0 18px rgba(96, 165, 250, 0.8);
+}
+
+@keyframes qt-orbit {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1023px) {
+  .qt-story-backdrop::before {
+    background-size: 52px 52px;
+  }
+
+  .qt-story-copy {
+    max-width: min(88vw, 540px);
+    padding-top: 34vh;
+  }
+
+  .qt-css-scene {
+    margin-left: 22vw;
+    transform: scale(0.82) rotateX(-9deg) rotateY(-17deg);
+  }
+}
+
+@media (max-width: 639px) {
+  .qt-css-scene {
+    margin-left: 44vw;
+    transform: scale(0.62) rotateX(-9deg) rotateY(-17deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .qt-story-copy,
+  .qt-capability-card,
+  .qt-scene-fallback-orbit,
+  .qt-css-tool,
+  .qt-css-scan-plane {
+    transition: none;
+    animation: none;
+  }
+}

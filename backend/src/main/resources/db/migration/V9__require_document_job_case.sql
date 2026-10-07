@@ -1,0 +1,2 @@
+ALTER TABLE documents
+    ALTER COLUMN case_id SET NOT NULL;

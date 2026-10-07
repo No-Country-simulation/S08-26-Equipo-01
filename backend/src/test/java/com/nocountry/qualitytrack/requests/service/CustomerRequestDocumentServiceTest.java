@@ -1,0 +1,280 @@
+package com.nocountry.qualitytrack.requests.service;
+
+import com.nocountry.qualitytrack.documents.dto.request.CreateDocumentRequest;
+import com.nocountry.qualitytrack.documents.dto.response.DocumentResponse;
+import com.nocountry.qualitytrack.documents.dto.response.DocumentVersionResponse;
+import com.nocountry.qualitytrack.documents.service.DocumentService;
+import com.nocountry.qualitytrack.documents.service.DocumentVersionMutationResult;
+import com.nocountry.qualitytrack.requests.dto.request.CreateRequestDocument;
+import com.nocountry.qualitytrack.requests.dto.response.RequestDocumentResponse;
+import com.nocountry.qualitytrack.requests.dto.response.RequestDocumentVersionResponse;
+import com.nocountry.qualitytrack.requests.entity.JobCase;
+import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
+import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
+import com.nocountry.qualitytrack.shared.exception.BusinessException;
+import com.nocountry.qualitytrack.traceability.enums.TraceabilityAggregateType;
+import com.nocountry.qualitytrack.traceability.enums.TraceabilityEventType;
+import com.nocountry.qualitytrack.traceability.service.TraceabilityService;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.mock.web.MockMultipartFile;
+
+import java.time.Instant;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class CustomerRequestDocumentServiceTest {
+
+    @Mock
+    private JobCaseRepository jobCaseRepository;
+
+    @Mock
+    private DocumentService documentService;
+
+    @Mock
+    private TraceabilityService traceabilityService;
+
+    @Mock
+    private JobCase jobCase;
+
+    @Mock
+    private DocumentResponse documentResponse;
+
+    @Mock
+    private DocumentVersionResponse versionResponse;
+
+    private CustomerRequestDocumentService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new CustomerRequestDocumentService(
+                jobCaseRepository,
+                documentService,
+                traceabilityService
+        );
+    }
+
+    @Test
+    void createsDocumentUsingLockedCaseResolvedFromRequestAndReturnsContextualUrls() {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "plano.pdf",
+                "application/pdf",
+                "drawing".getBytes()
+        );
+
+        when(jobCaseRepository.findByRequestAndCustomerForUpdate(31L, 20L))
+                .thenReturn(Optional.of(jobCase));
+        when(jobCase.getId()).thenReturn(73L);
+        when(documentService.create(
+                10L,
+                new CreateDocumentRequest(
+                        73L,
+                        "REQUEST_ATTACHMENT",
+                        "plano.pdf",
+                        null
+                ),
+                file
+        )).thenReturn(documentResponse);
+        stubDocumentResponse();
+
+        RequestDocumentResponse result = service.create(
+                10L,
+                20L,
+                31L,
+                null,
+                file
+        );
+
+        assertEquals(7L, result.id());
+        assertEquals(
+                "/api/v1/customers/20/requests/31/documents/7/versions/21/content",
+                result.currentVersion().contentUrl()
+        );
+        assertEquals(
+                "/api/v1/customers/20/requests/31/documents/7/versions/21/content?download=true",
+                result.currentVersion().downloadUrl()
+        );
+        verify(jobCaseRepository).findByRequestAndCustomerForUpdate(31L, 20L);
+        verify(traceabilityService).record(
+                eq(jobCase),
+                eq(TraceabilityAggregateType.DOCUMENT),
+                eq(7L),
+                eq(TraceabilityEventType.DOCUMENT_ADDED),
+                any(),
+                any(),
+                eq(10L),
+                eq(Map.of(
+                        "requestId", 31L,
+                        "documentType", "DRAWING",
+                        "documentName", "Plano de eje",
+                        "fileName", "plano.pdf"
+                ))
+        );
+    }
+
+    @Test
+    void usesExplicitMetadataWithoutExposingCaseIdToClient() {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "archivo.bin",
+                "application/octet-stream",
+                "content".getBytes()
+        );
+        CreateRequestDocument metadata = new CreateRequestDocument(
+                " DRAWING ",
+                " Plano aprobado ",
+                " Revisión inicial "
+        );
+
+        when(jobCaseRepository.findByRequestAndCustomerForUpdate(31L, 20L))
+                .thenReturn(Optional.of(jobCase));
+        when(jobCase.getId()).thenReturn(73L);
+        when(documentService.create(
+                10L,
+                new CreateDocumentRequest(
+                        73L,
+                        "DRAWING",
+                        "Plano aprobado",
+                        " Revisión inicial "
+                ),
+                file
+        )).thenReturn(documentResponse);
+        stubDocumentResponse();
+
+        RequestDocumentResponse result = service.create(
+                10L,
+                20L,
+                31L,
+                metadata,
+                file
+        );
+
+        assertEquals("Plano de eje", result.name());
+    }
+
+    @Test
+    void forwardsLockedCaseContextWhenAddingVersionAndBuildsUrls() {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "plano-v2.pdf",
+                "application/pdf",
+                "revision".getBytes()
+        );
+
+        when(jobCaseRepository.findByRequestAndCustomerForUpdate(31L, 20L))
+                .thenReturn(Optional.of(jobCase));
+        when(jobCase.getId()).thenReturn(73L);
+        stubVersionResponse();
+        when(documentService.addVersion(10L, 73L, 7L, file))
+                .thenReturn(new DocumentVersionMutationResult(versionResponse, "Plano de eje"));
+
+        RequestDocumentVersionResponse result = service.addVersion(
+                10L,
+                20L,
+                31L,
+                7L,
+                file
+        );
+
+        assertEquals(
+                "/api/v1/customers/20/requests/31/documents/7/versions/21/content",
+                result.contentUrl()
+        );
+        verify(jobCaseRepository).findByRequestAndCustomerForUpdate(31L, 20L);
+        verify(traceabilityService).record(
+                eq(jobCase),
+                eq(TraceabilityAggregateType.DOCUMENT_VERSION),
+                eq(21L),
+                eq(TraceabilityEventType.DOCUMENT_VERSION_ADDED),
+                any(),
+                any(),
+                eq(10L),
+                eq(Map.of(
+                        "requestId", 31L,
+                        "documentId", 7L,
+                        "documentName", "Plano de eje",
+                        "version", 1,
+                        "fileName", "plano.pdf"
+                ))
+        );
+    }
+
+    @Test
+    void removesDocumentOnlyAfterLockingRequestContext() {
+        when(jobCaseRepository.findByRequestAndCustomerForUpdate(31L, 20L))
+                .thenReturn(Optional.of(jobCase));
+        when(jobCase.getId()).thenReturn(73L);
+        when(documentService.remove(10L, 73L, 7L)).thenReturn("Plano de eje");
+
+        service.remove(10L, 20L, 31L, 7L);
+
+        verify(jobCaseRepository).findByRequestAndCustomerForUpdate(31L, 20L);
+        verify(documentService).remove(10L, 73L, 7L);
+        verify(traceabilityService).record(
+                eq(jobCase),
+                eq(TraceabilityAggregateType.DOCUMENT),
+                eq(7L),
+                eq(TraceabilityEventType.DOCUMENT_REMOVED),
+                any(),
+                any(),
+                eq(10L),
+                eq(Map.of(
+                        "requestId", 31L,
+                        "documentName", "Plano de eje"
+                ))
+        );
+    }
+
+    @Test
+    void rejectsRequestOutsideCustomerContextBeforeTouchingDocuments() {
+        when(jobCaseRepository.findByRequestAndCustomerForUpdate(31L, 20L))
+                .thenReturn(Optional.empty());
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.remove(10L, 20L, 31L, 7L)
+        );
+
+        assertEquals(ApiErrorCode.RESOURCE_NOT_FOUND, exception.getCode());
+        verify(documentService, never()).remove(10L, 73L, 7L);
+    }
+
+    private void stubDocumentResponse() {
+        stubVersionResponse();
+        when(documentResponse.id()).thenReturn(7L);
+        when(documentResponse.documentType()).thenReturn("DRAWING");
+        when(documentResponse.name()).thenReturn("Plano de eje");
+        when(documentResponse.description()).thenReturn("Plano recibido del cliente");
+        when(documentResponse.createdByUserId()).thenReturn(42L);
+        when(documentResponse.createdByName()).thenReturn("Ana López");
+        when(documentResponse.createdAt()).thenReturn(Instant.parse("2026-09-10T23:40:00Z"));
+        when(documentResponse.currentVersion()).thenReturn(versionResponse);
+    }
+
+    private void stubVersionResponse() {
+        when(versionResponse.id()).thenReturn(21L);
+        when(versionResponse.version()).thenReturn(1);
+        when(versionResponse.fileName()).thenReturn("plano.pdf");
+        when(versionResponse.mimeType()).thenReturn("application/pdf");
+        when(versionResponse.fileSize()).thenReturn(245812L);
+        when(versionResponse.checksum()).thenReturn(
+                "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        );
+        when(versionResponse.uploadedByUserId()).thenReturn(42L);
+        when(versionResponse.uploadedByName()).thenReturn("Ana López");
+        when(versionResponse.uploadedAt()).thenReturn(Instant.parse("2026-09-10T23:40:00Z"));
+    }
+}

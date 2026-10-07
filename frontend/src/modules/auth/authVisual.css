@@ -1,0 +1,225 @@
+.qt-auth-root {
+  min-height: 100svh;
+  background:
+    radial-gradient(circle at 78% 12%, rgba(34, 211, 238, 0.08), transparent 26%),
+    radial-gradient(circle at 58% 82%, rgba(59, 130, 246, 0.07), transparent 32%),
+    #030816;
+}
+
+body:has(.qt-auth-root) {
+  background: #030816;
+}
+
+.qt-auth-root--locked {
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.qt-auth-root--locked .qt-auth-form-stage,
+.qt-auth-root--locked .qt-auth-brand-panel {
+  height: 100dvh;
+  min-height: 100dvh;
+}
+
+.qt-auth-form-stage {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(4, 11, 24, 0.94), rgba(6, 16, 32, 0.98)),
+    #050b16;
+}
+
+.qt-auth-form-stage::before {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  content: '';
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(103, 232, 249, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(103, 232, 249, 0.035) 1px, transparent 1px);
+  background-size: 58px 58px;
+  mask-image: radial-gradient(circle at 52% 46%, black 0%, transparent 74%);
+}
+
+.qt-auth-form-stage::after {
+  position: absolute;
+  top: 15%;
+  right: 8%;
+  z-index: -1;
+  width: min(42vw, 520px);
+  height: min(42vw, 520px);
+  content: '';
+  pointer-events: none;
+  border-radius: 999px;
+  background: rgba(34, 211, 238, 0.055);
+  filter: blur(90px);
+}
+
+.qt-auth-form-card {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.82);
+  background:
+    radial-gradient(
+      circle at 92% 0%,
+      rgba(14, 165, 233, 0.085),
+      transparent 30%
+    ),
+    #ffffff;
+  box-shadow:
+    0 28px 90px -42px rgba(2, 6, 23, 0.9),
+    0 0 0 1px rgba(103, 232, 249, 0.035),
+    inset 0 1px 0 rgba(255, 255, 255, 0.96);
+}
+
+.qt-auth-form-card::before {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  content: '';
+  pointer-events: none;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(59, 130, 246, 0.72),
+    rgba(34, 211, 238, 0.82),
+    transparent
+  );
+}
+
+.qt-auth-eyebrow {
+  color: rgb(2 132 199);
+}
+
+.qt-auth-form-card form label {
+  color: rgb(51 65 85) !important;
+}
+
+.qt-auth-form-card form input {
+  border-color: rgb(203 213 225) !important;
+  background: rgba(255, 255, 255, 0.98) !important;
+  color: rgb(15 23 42) !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.035) !important;
+}
+
+.qt-auth-form-card form input::placeholder {
+  color: rgb(148 163 184) !important;
+}
+
+.qt-auth-form-card form input:focus {
+  border-color: rgb(14 165 233) !important;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.11) !important;
+}
+
+.qt-auth-form-card form button[type='submit'] {
+  border: 1px solid rgba(14, 165, 233, 0.28) !important;
+  background: linear-gradient(135deg, #0f6bdc, #0ea5e9) !important;
+  color: white !important;
+  box-shadow: 0 12px 28px -16px rgba(14, 165, 233, 0.9) !important;
+}
+
+.qt-auth-form-card form button[type='submit']:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0d62ca, #0891d1) !important;
+}
+
+.qt-auth-form-card form button[type='submit']:disabled {
+  opacity: 0.58;
+}
+
+.qt-auth-root a {
+  color: rgb(2 132 199);
+}
+
+.qt-auth-root a:hover {
+  color: rgb(3 105 161);
+}
+
+.qt-auth-footer {
+  color: rgb(148 163 184);
+}
+
+.qt-auth-brand-panel {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 22% 14%, rgba(37, 99, 235, 0.18), transparent 34%),
+    radial-gradient(circle at 78% 72%, rgba(16, 185, 129, 0.08), transparent 28%),
+    linear-gradient(180deg, #03101f 0%, #04111f 44%, #020817 100%);
+}
+
+.qt-auth-brand-panel::before {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  content: '';
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(125, 211, 252, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(125, 211, 252, 0.045) 1px, transparent 1px);
+  background-size: 64px 64px;
+  mask-image: linear-gradient(to bottom, black, transparent 88%);
+}
+
+.qt-auth-brand-panel::after {
+  position: absolute;
+  right: 8%;
+  bottom: 18%;
+  z-index: -1;
+  width: 240px;
+  height: 240px;
+  content: '';
+  pointer-events: none;
+  border-radius: 999px;
+  background: rgba(34, 211, 238, 0.045);
+  filter: blur(72px);
+}
+
+@media (max-width: 1023px) {
+  .qt-auth-form-stage {
+    min-height: 100svh;
+  }
+
+  .qt-auth-root--locked .qt-auth-form-stage {
+    height: 100dvh;
+    min-height: 100dvh;
+  }
+
+  .qt-auth-form-stage::after {
+    top: 8%;
+    right: -18%;
+    width: 78vw;
+    height: 78vw;
+  }
+
+  .qt-auth-form-card {
+    border-radius: 22px;
+  }
+}
+
+@media (max-width: 767px), (pointer: coarse) {
+  .qt-auth-form-card form input,
+  .qt-auth-form-card form button,
+  .qt-auth-form-card form a,
+  .qt-auth-back-link {
+    min-height: 44px !important;
+  }
+
+  .qt-auth-form-card form a {
+    display: inline-flex;
+    align-items: center;
+  }
+}
+
+@media (max-width: 639px) {
+  .qt-auth-form-card {
+    border-radius: 18px;
+    box-shadow: 0 24px 70px -42px rgba(2, 6, 23, 0.96);
+  }
+}
