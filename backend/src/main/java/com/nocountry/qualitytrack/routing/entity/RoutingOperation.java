@@ -7,7 +7,10 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -16,8 +19,11 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Set;
 
 @Entity
 @Table(name = "routing_operations")
@@ -47,6 +53,15 @@ public class RoutingOperation {
 
     @Column(name = "estimated_minutes", nullable = false)
     private Integer estimatedMinutes;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "routing_operation_dependencies",
+            joinColumns = @JoinColumn(name = "operation_id"),
+            inverseJoinColumns = @JoinColumn(name = "prerequisite_operation_id")
+    )
+    @OrderBy("sequenceNumber ASC")
+    private Set<RoutingOperation> prerequisites = new LinkedHashSet<>();
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -78,6 +93,39 @@ public class RoutingOperation {
             Integer estimatedMinutes
     ) {
         apply(sequenceNumber, code, name, instructions, estimatedMinutes);
+    }
+
+    public void replacePrerequisites(Collection<RoutingOperation> operations) {
+        LinkedHashSet<RoutingOperation> normalized = new LinkedHashSet<>();
+
+        if (operations != null) {
+            for (RoutingOperation prerequisite : operations) {
+                if (prerequisite == null) {
+                    throw new IllegalArgumentException("La dependencia de operación no puede ser nula.");
+                }
+                if (prerequisite == this) {
+                    throw new IllegalArgumentException("Una operación no puede depender de sí misma.");
+                }
+                if (prerequisite.getRoutingSheet() != routingSheet
+                        && !Objects.equals(
+                        prerequisite.getRoutingSheet().getId(),
+                        routingSheet.getId()
+                )) {
+                    throw new IllegalArgumentException(
+                            "La dependencia debe pertenecer a la misma hoja de ruta."
+                    );
+                }
+                if (prerequisite.getSequenceNumber() >= sequenceNumber) {
+                    throw new IllegalArgumentException(
+                            "Una operación solo puede depender de secuencias anteriores."
+                    );
+                }
+                normalized.add(prerequisite);
+            }
+        }
+
+        prerequisites.clear();
+        prerequisites.addAll(normalized);
     }
 
     private void apply(

@@ -20,8 +20,8 @@ public enum CustomerQuotationStatus {
             case EXPIRED -> EXPIRED;
             case CANCELLED -> CANCELLED;
             case SUPERSEDED -> adjustmentPending ? ADJUSTMENT_REQUESTED : REPLACED;
-            case DRAFT -> throw new IllegalArgumentException(
-                    "Una cotización DRAFT no tiene estado visible para el cliente."
+            case DRAFT, ADJUSTMENT_REQUESTED -> throw new IllegalArgumentException(
+                    "El estado interno de la cotización no es visible para el cliente."
             );
         };
     }

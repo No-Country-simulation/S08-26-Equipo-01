@@ -6,13 +6,18 @@ import com.nocountry.qualitytrack.deliveries.dto.request.CreateDeliveryRequest;
 import com.nocountry.qualitytrack.deliveries.entity.Delivery;
 import com.nocountry.qualitytrack.deliveries.enums.DeliveryStatus;
 import com.nocountry.qualitytrack.deliveries.repository.DeliveryRepository;
+import com.nocountry.qualitytrack.documents.entity.Document;
+import com.nocountry.qualitytrack.documents.entity.DocumentVersion;
 import com.nocountry.qualitytrack.documents.repository.DocumentVersionRepository;
 import com.nocountry.qualitytrack.documents.service.DocumentAccessService;
+import com.nocountry.qualitytrack.documents.service.DocumentService;
 import com.nocountry.qualitytrack.quotations.entity.Quotation;
 import com.nocountry.qualitytrack.requests.entity.CustomerRequest;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
+import com.nocountry.qualitytrack.requests.enums.JobCaseStatus;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
+import com.nocountry.qualitytrack.traceability.enums.TraceabilityEventType;
 import com.nocountry.qualitytrack.traceability.service.TraceabilityService;
 import com.nocountry.qualitytrack.users.entity.User;
 import com.nocountry.qualitytrack.workorders.entity.WorkOrder;
@@ -34,6 +39,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -47,6 +53,7 @@ class DeliveryServiceTest {
     @Mock private JobCaseRepository jobCaseRepository;
     @Mock private DocumentVersionRepository documentVersionRepository;
     @Mock private DocumentAccessService documentAccessService;
+    @Mock private DocumentService documentService;
     @Mock private TraceabilityService traceabilityService;
     @Mock private JobCase jobCase;
     @Mock private CustomerRequest customerRequest;
@@ -67,12 +74,16 @@ class DeliveryServiceTest {
                 jobCaseRepository,
                 documentVersionRepository,
                 documentAccessService,
+                documentService,
                 traceabilityService
         );
 
         lenient().when(logistics.getId()).thenReturn(10L);
         lenient().when(customerUser.getId()).thenReturn(20L);
         lenient().when(jobCase.getCustomerRequest()).thenReturn(customerRequest);
+        lenient().when(jobCase.getId()).thenReturn(50L);
+        lenient().when(jobCase.getCaseNumber()).thenReturn("CASE-DELIVERY-001");
+        lenient().when(jobCase.getStatus()).thenReturn(JobCaseStatus.IN_PRODUCTION);
         lenient().when(customerRequest.getId()).thenReturn(30L);
         lenient().when(customerRequest.getCustomer()).thenReturn(customer);
         lenient().when(customer.getId()).thenReturn(40L);
@@ -82,10 +93,38 @@ class DeliveryServiceTest {
     }
 
     @Test
+    void listsDeliveriesForInternalReaders() {
+        Delivery delivery = Delivery.create(
+                workOrder,
+                5,
+                "Planta principal",
+                "Cliente SA",
+                "Av. Principal 123",
+                "Tepic",
+                "Nayarit",
+                "63000",
+                "México",
+                null,
+                "PAQUETERIA",
+                logistics
+        );
+        ReflectionTestUtils.setField(delivery, "id", 99L);
+        when(deliveryRepository.findAllByOrderByCreatedAtDescIdDesc())
+                .thenReturn(List.of(delivery));
+
+        var response = service.listAll(10L);
+
+        assertEquals(1, response.size());
+        assertEquals(99L, response.get(0).id());
+        assertEquals(DeliveryStatus.PENDING, response.get(0).status());
+        verify(accessPolicy).requireInternalReader(10L);
+    }
+
+    @Test
     void createsPartialDeliveryWhileReservedQuantityFitsPlan() {
         when(accessPolicy.requireLogisticsActor(10L)).thenReturn(logistics);
         when(workOrderRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(workOrder));
-        when(deliveryRepository.sumReservedQuantityByWorkOrderId(7L, DeliveryStatus.CANCELLED))
+        when(deliveryRepository.sumCommittedQuantityByWorkOrderId(7L, DeliveryStatus.CANCELLED))
                 .thenReturn(8L);
         when(deliveryRepository.saveAndFlush(any(Delivery.class)))
                 .thenAnswer(invocation -> {
@@ -108,7 +147,7 @@ class DeliveryServiceTest {
     void rejectsDeliveryWhenActiveReservationsWouldExceedPlan() {
         when(accessPolicy.requireLogisticsActor(10L)).thenReturn(logistics);
         when(workOrderRepository.findByIdForUpdate(7L)).thenReturn(Optional.of(workOrder));
-        when(deliveryRepository.sumReservedQuantityByWorkOrderId(7L, DeliveryStatus.CANCELLED))
+        when(deliveryRepository.sumCommittedQuantityByWorkOrderId(7L, DeliveryStatus.CANCELLED))
                 .thenReturn(15L);
 
         assertThrows(
@@ -145,12 +184,14 @@ class DeliveryServiceTest {
         Delivery pending = Delivery.create(
                 workOrder,
                 2,
+                "Planta principal",
                 "Cliente SA",
                 "Av. Principal 123",
                 "Tepic",
                 "Nayarit",
                 "63000",
                 "México",
+                null,
                 "PAQUETERIA",
                 logistics
         );
@@ -158,12 +199,14 @@ class DeliveryServiceTest {
         Delivery cancelledBeforeDispatch = Delivery.create(
                 workOrder,
                 2,
+                "Planta principal",
                 "Cliente SA",
                 "Av. Principal 123",
                 "Tepic",
                 "Nayarit",
                 "63000",
                 "México",
+                null,
                 "PAQUETERIA",
                 logistics
         );
@@ -174,6 +217,26 @@ class DeliveryServiceTest {
         );
 
         Delivery dispatched = dispatchedDelivery(4);
+        Document evidenceDocument = Document.create(
+                jobCase,
+                "DELIVERY_EVIDENCE",
+                "Acuse de entrega",
+                null,
+                logistics
+        );
+        ReflectionTestUtils.setField(evidenceDocument, "id", 70L);
+        DocumentVersion evidenceVersion = DocumentVersion.upload(
+                evidenceDocument,
+                1,
+                "acuse-firmado.pdf",
+                "deliveries/acuse-firmado.pdf",
+                "application/pdf",
+                120L,
+                "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                logistics
+        );
+        ReflectionTestUtils.setField(evidenceVersion, "id", 71L);
+        dispatched.attachEvidence(evidenceVersion);
 
         when(deliveryRepository
                 .findAllByWorkOrder_JobCase_CustomerRequest_IdAndWorkOrder_JobCase_CustomerRequest_Customer_IdOrderByCreatedAtAscIdAsc(
@@ -186,6 +249,9 @@ class DeliveryServiceTest {
 
         assertEquals(1, response.size());
         assertEquals(DeliveryStatus.DISPATCHED, response.get(0).status());
+        assertEquals(70L, response.get(0).evidenceDocumentId());
+        assertEquals(71L, response.get(0).evidenceDocumentVersionId());
+        assertEquals("acuse-firmado.pdf", response.get(0).evidenceFileName());
     }
 
     @Test
@@ -210,13 +276,17 @@ class DeliveryServiceTest {
     }
 
     @Test
-    void finalLogisticsDeliveryClosesWorkOrder() {
+    void finalLogisticsDeliveryClosesWorkOrderAndJobCase() {
         Delivery delivery = dispatchedDelivery(12);
         stubLockedDelivery(delivery);
         when(accessPolicy.requireLogisticsActor(10L)).thenReturn(logistics);
         when(deliveryRepository.saveAndFlush(delivery)).thenReturn(delivery);
         when(deliveryRepository.sumDeliveredQuantityByWorkOrderId(7L, DeliveryStatus.DELIVERED))
                 .thenReturn(20L);
+        when(deliveryRepository.findLatestDeliveredAtByWorkOrderId(
+                7L,
+                DeliveryStatus.DELIVERED
+        )).thenReturn(Optional.of(Instant.parse("2026-09-28T20:00:00Z")));
 
         service.deliver(
                 10L,
@@ -226,6 +296,18 @@ class DeliveryServiceTest {
 
         assertEquals(WorkOrderStatus.DELIVERED, workOrder.getStatus());
         verify(workOrderRepository).saveAndFlush(workOrder);
+        verify(jobCase).complete(Instant.parse("2026-09-28T20:00:00Z"));
+        verify(jobCaseRepository).saveAndFlush(jobCase);
+        verify(traceabilityService).record(
+                eq(jobCase),
+                eq(com.nocountry.qualitytrack.traceability.enums.TraceabilityAggregateType.JOB_CASE),
+                eq(50L),
+                eq(TraceabilityEventType.JOB_CASE_COMPLETED),
+                eq(JobCaseStatus.IN_PRODUCTION.name()),
+                eq(JobCaseStatus.COMPLETED.name()),
+                eq(10L),
+                any()
+        );
     }
 
     private void stubLockedDelivery(Delivery delivery) {
@@ -238,12 +320,14 @@ class DeliveryServiceTest {
         Delivery delivery = Delivery.create(
                 workOrder,
                 quantity,
+                "Planta principal",
                 "Cliente SA",
                 "Av. Principal 123",
                 "Tepic",
                 "Nayarit",
                 "63000",
                 "México",
+                null,
                 "PAQUETERIA",
                 logistics
         );
@@ -260,12 +344,14 @@ class DeliveryServiceTest {
     private CreateDeliveryRequest createRequest(int quantity) {
         return new CreateDeliveryRequest(
                 quantity,
+                "Planta principal",
                 "Cliente SA",
                 "Av. Principal 123",
                 "Tepic",
                 "Nayarit",
                 "63000",
                 "México",
+                "Acceso por almacén",
                 "PAQUETERIA"
         );
     }

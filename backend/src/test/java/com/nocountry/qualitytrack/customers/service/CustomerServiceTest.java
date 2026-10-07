@@ -1,7 +1,9 @@
 package com.nocountry.qualitytrack.customers.service;
 
 import com.nocountry.qualitytrack.customers.dto.request.CreateCustomerRequest;
+import com.nocountry.qualitytrack.customers.dto.request.UpdateCustomerMemberRoleRequest;
 import com.nocountry.qualitytrack.customers.dto.request.UpdateCustomerRequest;
+import com.nocountry.qualitytrack.customers.dto.response.CustomerContextResponse;
 import com.nocountry.qualitytrack.customers.entity.Customer;
 import com.nocountry.qualitytrack.customers.entity.CustomerMembership;
 import com.nocountry.qualitytrack.customers.enums.CustomerMembershipRole;
@@ -13,6 +15,7 @@ import com.nocountry.qualitytrack.shared.exception.BusinessException;
 import com.nocountry.qualitytrack.users.entity.User;
 import com.nocountry.qualitytrack.users.enums.AccountType;
 import com.nocountry.qualitytrack.users.repository.UserRepository;
+import com.nocountry.qualitytrack.users.service.DemoAccountPolicy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,32 +40,25 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class CustomerServiceTest {
 
-    @Mock
-    private CustomerRepository customerRepository;
-
-    @Mock
-    private CustomerMembershipRepository membershipRepository;
-
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private User user;
-
-    @Mock
-    private Customer customer;
-
-    @Mock
-    private CustomerMembership actorMembership;
-
-    @Mock
-    private CustomerMembership targetMembership;
+    @Mock private CustomerRepository customerRepository;
+    @Mock private CustomerMembershipRepository membershipRepository;
+    @Mock private UserRepository userRepository;
+    @Mock private DemoAccountPolicy demoAccountPolicy;
+    @Mock private User user;
+    @Mock private Customer customer;
+    @Mock private CustomerMembership actorMembership;
+    @Mock private CustomerMembership targetMembership;
 
     private CustomerService service;
 
     @BeforeEach
     void setUp() {
-        service = new CustomerService(customerRepository, membershipRepository, userRepository);
+        service = new CustomerService(
+                customerRepository,
+                membershipRepository,
+                userRepository,
+                demoAccountPolicy
+        );
     }
 
     @Test
@@ -122,6 +118,31 @@ class CustomerServiceTest {
         assertEquals(ApiErrorCode.ACCESS_DENIED, exception.getCode());
         verify(customerRepository, never()).saveAndFlush(any(Customer.class));
         verify(membershipRepository, never()).save(any(CustomerMembership.class));
+    }
+
+    @Test
+    void listsCurrentUserActiveCustomers() {
+        when(membershipRepository.findAllByUser_IdAndStatusOrderByCreatedAtAsc(
+                10L,
+                CustomerMembershipStatus.ACTIVE
+        )).thenReturn(List.of(actorMembership));
+        when(actorMembership.getCustomer()).thenReturn(customer);
+        when(customer.getId()).thenReturn(20L);
+        when(customer.getName()).thenReturn("Taller Norte");
+        when(actorMembership.getRole()).thenReturn(CustomerMembershipRole.REQUESTER);
+        when(actorMembership.getStatus()).thenReturn(CustomerMembershipStatus.ACTIVE);
+
+        List<CustomerContextResponse> response = service.listMyCustomers(10L);
+
+        assertEquals(1, response.size());
+        assertEquals(20L, response.get(0).customerId());
+        assertEquals("Taller Norte", response.get(0).customerName());
+        assertEquals(CustomerMembershipRole.REQUESTER, response.get(0).role());
+
+        verify(membershipRepository).findAllByUser_IdAndStatusOrderByCreatedAtAsc(
+                10L,
+                CustomerMembershipStatus.ACTIVE
+        );
     }
 
     @Test
@@ -185,6 +206,69 @@ class CustomerServiceTest {
 
         assertEquals(ApiErrorCode.ACCESS_DENIED, exception.getCode());
         verify(customerRepository, never()).findById(20L);
+    }
+
+    @Test
+    void adminCanChangeActiveMemberRole() {
+        when(customerRepository.findByIdForUpdate(20L)).thenReturn(Optional.of(customer));
+        when(membershipRepository.findByCustomer_IdAndUser_IdAndStatus(
+                20L,
+                10L,
+                CustomerMembershipStatus.ACTIVE
+        )).thenReturn(Optional.of(actorMembership));
+        when(actorMembership.getRole()).thenReturn(CustomerMembershipRole.ADMIN);
+        when(membershipRepository.findByCustomer_IdAndUser_IdAndStatus(
+                20L,
+                11L,
+                CustomerMembershipStatus.ACTIVE
+        )).thenReturn(Optional.of(targetMembership));
+        when(targetMembership.getRole()).thenReturn(CustomerMembershipRole.REQUESTER);
+
+        service.updateMemberRole(
+                10L,
+                20L,
+                11L,
+                new UpdateCustomerMemberRoleRequest(CustomerMembershipRole.VIEWER)
+        );
+
+        verify(targetMembership).changeRole(CustomerMembershipRole.VIEWER);
+        verify(membershipRepository).save(targetMembership);
+    }
+
+    @Test
+    void rejectsDemotingLastActiveAdmin() {
+        when(customerRepository.findByIdForUpdate(20L)).thenReturn(Optional.of(customer));
+        when(membershipRepository.findByCustomer_IdAndUser_IdAndStatus(
+                20L,
+                10L,
+                CustomerMembershipStatus.ACTIVE
+        )).thenReturn(Optional.of(actorMembership));
+        when(actorMembership.getRole()).thenReturn(CustomerMembershipRole.ADMIN);
+        when(membershipRepository.findByCustomer_IdAndUser_IdAndStatus(
+                20L,
+                11L,
+                CustomerMembershipStatus.ACTIVE
+        )).thenReturn(Optional.of(targetMembership));
+        when(targetMembership.getRole()).thenReturn(CustomerMembershipRole.ADMIN);
+        when(membershipRepository.countByCustomer_IdAndRoleAndStatus(
+                20L,
+                CustomerMembershipRole.ADMIN,
+                CustomerMembershipStatus.ACTIVE
+        )).thenReturn(1L);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.updateMemberRole(
+                        10L,
+                        20L,
+                        11L,
+                        new UpdateCustomerMemberRoleRequest(CustomerMembershipRole.VIEWER)
+                )
+        );
+
+        assertEquals(ApiErrorCode.DATA_CONFLICT, exception.getCode());
+        verify(targetMembership, never()).changeRole(any());
+        verify(membershipRepository, never()).save(targetMembership);
     }
 
     @Test

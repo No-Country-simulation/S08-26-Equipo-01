@@ -27,6 +27,8 @@ public record QuotationSourceResponse(
         LocalDate requestedDeliveryDate,
         Long requestedByUserId,
         String requestedByName,
+        Long assignedToUserId,
+        String assignedToName,
         CaseMaterialSpecificationResponse materialSpecification,
         List<RequestDocumentResponse> documents,
         List<CaseInformationRequestResponse> informationRequests
@@ -55,6 +57,10 @@ public record QuotationSourceResponse(
                 request.getRequestedDeliveryDate(),
                 request.getRequestedByUser().getId(),
                 fullName(request.getRequestedByUser()),
+                jobCase.getAssignedToUser() == null
+                        ? null
+                        : jobCase.getAssignedToUser().getId(),
+                fullName(jobCase.getAssignedToUser()),
                 materialSpecification,
                 documents == null ? List.of() : List.copyOf(documents),
                 informationRequests == null ? List.of() : List.copyOf(informationRequests)
@@ -62,6 +68,10 @@ public record QuotationSourceResponse(
     }
 
     private static String fullName(User user) {
+        if (user == null) {
+            return null;
+        }
+
         String first = user.getFirstName() == null ? "" : user.getFirstName().trim();
         String last = user.getLastName() == null ? "" : user.getLastName().trim();
         String name = (first + " " + last).trim();

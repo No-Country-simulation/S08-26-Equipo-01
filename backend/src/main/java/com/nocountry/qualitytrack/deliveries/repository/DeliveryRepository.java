@@ -9,10 +9,13 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
 public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
+
+    long countByStatus(DeliveryStatus status);
 
     @Override
     @EntityGraph(attributePaths = {
@@ -27,6 +30,12 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
             "deliveredByUser", "cancelledByUser", "evidenceDocumentVersion"
     })
     List<Delivery> findAllByWorkOrder_IdOrderByCreatedAtAscIdAsc(Long workOrderId);
+
+    @EntityGraph(attributePaths = {
+            "workOrder", "createdByUser", "dispatchedByUser",
+            "deliveredByUser", "cancelledByUser", "evidenceDocumentVersion"
+    })
+    List<Delivery> findAllByOrderByCreatedAtDescIdDesc();
 
     @EntityGraph(attributePaths = {
             "workOrder", "createdByUser", "dispatchedByUser",
@@ -63,7 +72,7 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
             where d.workOrder.id = :workOrderId
               and d.status <> :cancelledStatus
             """)
-    long sumReservedQuantityByWorkOrderId(
+    long sumCommittedQuantityByWorkOrderId(
             @Param("workOrderId") Long workOrderId,
             @Param("cancelledStatus") DeliveryStatus cancelledStatus
     );
@@ -75,6 +84,17 @@ public interface DeliveryRepository extends JpaRepository<Delivery, Long> {
               and d.status = :deliveredStatus
             """)
     long sumDeliveredQuantityByWorkOrderId(
+            @Param("workOrderId") Long workOrderId,
+            @Param("deliveredStatus") DeliveryStatus deliveredStatus
+    );
+
+    @Query("""
+            select max(d.deliveredAt)
+            from Delivery d
+            where d.workOrder.id = :workOrderId
+              and d.status = :deliveredStatus
+            """)
+    Optional<Instant> findLatestDeliveredAtByWorkOrderId(
             @Param("workOrderId") Long workOrderId,
             @Param("deliveredStatus") DeliveryStatus deliveredStatus
     );

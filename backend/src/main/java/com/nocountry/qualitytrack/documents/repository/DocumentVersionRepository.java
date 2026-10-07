@@ -42,6 +42,20 @@ public interface DocumentVersionRepository extends JpaRepository<DocumentVersion
             from DocumentVersion v
             join fetch v.uploadedBy
             join fetch v.document d
+            where d.status = :status
+              and d.id in :documentIds
+            order by d.id asc, v.version asc
+            """)
+    List<DocumentVersion> findAllActiveByDocumentIds(
+            @Param("status") DocumentStatus status,
+            @Param("documentIds") List<Long> documentIds
+    );
+
+    @Query("""
+            select v
+            from DocumentVersion v
+            join fetch v.uploadedBy
+            join fetch v.document d
             where d.id in :documentIds
               and v.version = (
                     select max(v2.version)
@@ -57,10 +71,28 @@ public interface DocumentVersionRepository extends JpaRepository<DocumentVersion
             "document.jobCase",
             "document.jobCase.customerRequest",
             "document.jobCase.customerRequest.customer",
+            "document.materialLot",
+            "document.materialLot.material",
             "document.createdBy"
     })
     Optional<DocumentVersion> findByIdAndDocument_Status(
             Long versionId,
+            DocumentStatus status
+    );
+
+    @EntityGraph(attributePaths = {
+            "uploadedBy",
+            "document",
+            "document.jobCase",
+            "document.jobCase.customerRequest",
+            "document.jobCase.customerRequest.customer",
+            "document.materialLot",
+            "document.materialLot.material",
+            "document.createdBy"
+    })
+    Optional<DocumentVersion> findByIdAndDocument_IdAndDocument_Status(
+            Long versionId,
+            Long documentId,
             DocumentStatus status
     );
 

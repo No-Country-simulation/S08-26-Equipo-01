@@ -2,7 +2,7 @@ package com.nocountry.qualitytrack.quality.dto.response;
 
 import com.nocountry.qualitytrack.nonconformities.entity.NonConformity;
 import com.nocountry.qualitytrack.quality.entity.QualityInspection;
-import com.nocountry.qualitytrack.quality.entity.QualityMeasurement;
+import com.nocountry.qualitytrack.quality.entity.QualityCheck;
 import com.nocountry.qualitytrack.quality.enums.QualityInspectionStatus;
 import com.nocountry.qualitytrack.users.entity.User;
 
@@ -19,7 +19,7 @@ public record QualityInspectionResponse(
         String inspectorName,
         Instant startedAt,
         Instant completedAt,
-        List<QualityMeasurementResponse> measurements,
+        List<QualityCheckResponse> checks,
         NonConformitySummaryResponse nonConformity,
         Instant createdAt,
         Instant updatedAt
@@ -27,7 +27,7 @@ public record QualityInspectionResponse(
 
     public static QualityInspectionResponse from(
             QualityInspection inspection,
-            List<QualityMeasurement> measurements,
+            List<QualityCheck> checks,
             NonConformity nonConformity
     ) {
         User inspector = inspection.getInspector();
@@ -46,8 +46,8 @@ public record QualityInspectionResponse(
                         : (inspector.getFirstName() + " " + inspector.getLastName()).trim(),
                 inspection.getStartedAt(),
                 inspection.getCompletedAt(),
-                measurements.stream()
-                        .map(QualityMeasurementResponse::from)
+                checks.stream()
+                        .map(QualityCheckResponse::from)
                         .toList(),
                 NonConformitySummaryResponse.from(nonConformity),
                 inspection.getCreatedAt(),

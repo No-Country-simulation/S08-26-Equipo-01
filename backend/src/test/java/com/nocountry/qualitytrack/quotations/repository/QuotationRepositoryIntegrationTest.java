@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @Testcontainers
@@ -72,6 +73,51 @@ class QuotationRepositoryIntegrationTest {
         assertEquals(1, visible.size());
         assertEquals(1, visible.get(0).getRevision());
         assertEquals("SUPERSEDED", visible.get(0).getStatus().name());
+    }
+
+    @Test
+    void lockedDraftWithAdjustmentRequestCanBeLoadedForUpdate() {
+        Fixture fixture = createFixture("adjustment-lock");
+
+        Long sourceQuotationId = insertQuotation(
+                fixture.caseId(),
+                fixture.internalUserId(),
+                "QT-ADJUSTMENT-LOCK",
+                1,
+                "SUPERSEDED",
+                Instant.now(),
+                null
+        );
+        Long draftQuotationId = insertQuotation(
+                fixture.caseId(),
+                fixture.internalUserId(),
+                "QT-ADJUSTMENT-LOCK",
+                2,
+                "DRAFT",
+                null,
+                null
+        );
+
+        jdbcTemplate.update(
+                """
+                INSERT INTO quotation_adjustment_requests (
+                    source_quotation_id,
+                    draft_quotation_id,
+                    notes,
+                    status
+                )
+                VALUES (?, ?, ?, 'OPEN')
+                """,
+                sourceQuotationId,
+                draftQuotationId,
+                "Reducir el plazo de entrega."
+        );
+
+        var locked = quotationRepository.findByIdForUpdate(draftQuotationId);
+
+        assertTrue(locked.isPresent());
+        assertEquals(draftQuotationId, locked.orElseThrow().getId());
+        assertEquals("DRAFT", locked.orElseThrow().getStatus().name());
     }
 
     @Test

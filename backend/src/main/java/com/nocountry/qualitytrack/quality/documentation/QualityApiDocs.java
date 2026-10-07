@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
 @Documented
 @Tag(
         name = "11 · Calidad",
-        description = "Handoff desde Producción, inspecciones formales, mediciones calculadas por backend y apertura atómica de no conformidades ante un rechazo."
+        description = "Handoff desde Producción, inspecciones formales, controles numéricos o PASS/FAIL y apertura atómica de no conformidades ante un rechazo."
 )
 public @interface QualityApiDocs {
 }

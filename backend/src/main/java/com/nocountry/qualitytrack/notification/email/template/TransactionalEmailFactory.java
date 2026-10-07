@@ -37,9 +37,15 @@ public class TransactionalEmailFactory {
                 "Seguridad",
                 "Verificación de correo",
                 "Confirma tu dirección de correo",
-                "Para terminar de crear tu cuenta, abre el enlace seguro de verificación.",
+                "Tu cuenta ya está creada. Solo falta confirmar que esta dirección de correo te pertenece para habilitar el acceso.",
+                "Qué ocurrirá",
+                List.of(
+                        detail("Acción", "Verificar correo"),
+                        detail("Resultado", "Activación de la cuenta"),
+                        detail("Protección", "Enlace personal de un solo uso")
+                ),
                 "Verificar mi correo",
-                "Al continuar, QualityTrack validará tu enlace y activará tu cuenta automáticamente.",
+                "La verificación se completa dentro de QualityTrack y tu cuenta quedará disponible al terminar.",
                 actionUrl,
                 "Si no creaste una cuenta en QualityTrack, puedes ignorar este mensaje."
         );
@@ -54,9 +60,15 @@ public class TransactionalEmailFactory {
                 "Seguridad",
                 "Seguridad de la cuenta",
                 "Restablece tu contraseña",
-                "Recibimos una solicitud para cambiar la contraseña de tu cuenta. Abre el enlace seguro para continuar.",
+                "Recibimos una solicitud para establecer una nueva contraseña. Tu acceso actual no cambia hasta que completes el proceso.",
+                "Resumen de seguridad",
+                List.of(
+                        detail("Acción", "Cambiar contraseña"),
+                        detail("Estado actual", "Tu contraseña sigue vigente"),
+                        detail("Protección", "Enlace personal de un solo uso")
+                ),
                 "Restablecer contraseña",
-                "El enlace abrirá QualityTrack para que puedas elegir una nueva contraseña.",
+                "Abre QualityTrack desde este enlace y define una nueva contraseña para tu cuenta.",
                 actionUrl,
                 "Si no solicitaste este cambio, ignora el correo. Tu contraseña actual permanecerá sin cambios."
         );
@@ -68,13 +80,19 @@ public class TransactionalEmailFactory {
 
         return buildContent(
                 "Invitación a " + customerName + " | QualityTrack",
-                "Has recibido una invitación para unirte a una empresa en QualityTrack.",
+                "Has recibido una invitación para unirte a " + customerName + " en QualityTrack.",
                 "Empresa",
                 "Invitación de miembro",
-                "Únete a " + customerName,
-                "Te invitaron a formar parte de esta empresa con el rol de " + roleLabel + ".",
+                "Te invitaron a formar parte de " + customerName,
+                "Una empresa que trabaja en QualityTrack quiere incorporarte a su espacio de trabajo. Revisa el contexto antes de aceptar.",
+                "Tu invitación",
+                List.of(
+                        detail("Empresa", customerName),
+                        detail("Rol asignado", roleLabel),
+                        detail("Acceso", customerAccessDescription(role))
+                ),
                 "Revisar invitación",
-                "Abre la invitación para revisar la empresa y el rol. Al aceptar, si ya tienes cuenta quedarás incorporado; si eres nuevo, te pediremos los datos mínimos para crearla y completar la incorporación.",
+                "Al aceptar, usarás este correo para incorporarte. Si todavía no tienes cuenta, podrás crearla durante el proceso.",
                 actionUrl,
                 "Si no esperabas esta invitación, puedes ignorar el mensaje. El enlace es personal y no debes compartirlo."
         );
@@ -83,18 +101,28 @@ public class TransactionalEmailFactory {
     public EmailContent internalInvitation(String token, List<String> roles) {
         String actionUrl = buildActionUrl(INTERNAL_INVITATION_PATH, token);
         String roleLabels = roles == null || roles.isEmpty()
-                ? "sin roles asignados"
-                : roles.stream().map(this::roleLabel).reduce((left, right) -> left + ", " + right).orElse("miembro interno");
+                ? "Sin roles asignados"
+                : roles.stream()
+                .map(this::roleLabel)
+                .map(this::capitalize)
+                .reduce((left, right) -> left + " · " + right)
+                .orElse("Miembro interno");
 
         return buildContent(
                 "Invitación al equipo interno | QualityTrack",
                 "Has recibido una invitación para incorporarte al equipo interno de QualityTrack.",
                 "Equipo interno",
                 "Invitación de acceso",
-                "Activa tu cuenta interna",
-                "Un administrador te invitó a QualityTrack con los roles: " + roleLabels + ".",
-                "Revisar invitación",
-                "Abre la invitación para revisar tus datos y crear una contraseña. El acceso quedará activo al completar este proceso.",
+                "Tu acceso interno está listo para activarse",
+                "Un administrador preparó una cuenta interna para ti. Antes de entrar podrás revisar tus datos y establecer tu contraseña.",
+                "Acceso asignado",
+                List.of(
+                        detail("Entorno", "Equipo interno de QualityTrack"),
+                        detail("Roles", roleLabels),
+                        detail("Activación", "Pendiente de crear contraseña")
+                ),
+                "Activar mi acceso",
+                "Abre la invitación para revisar tus datos. El acceso quedará activo cuando completes la creación de tu contraseña.",
                 actionUrl,
                 "Si no esperabas esta invitación, puedes ignorar el mensaje. El enlace es personal y no debes compartirlo."
         );
@@ -107,26 +135,32 @@ public class TransactionalEmailFactory {
             String eyebrow,
             String title,
             String description,
+            String detailHeading,
+            List<Map<String, String>> details,
             String actionLabel,
             String actionHint,
             String actionUrl,
             String securityMessage
     ) {
         Context context = new Context();
-        context.setVariables(Map.of(
-                "preheader", preheader,
-                "category", category,
-                "eyebrow", eyebrow,
-                "title", title,
-                "description", description,
-                "actionLabel", actionLabel,
-                "actionHint", actionHint,
-                "actionUrl", actionUrl,
-                "securityMessage", securityMessage
-        ));
+        context.setVariable("preheader", preheader);
+        context.setVariable("category", category);
+        context.setVariable("eyebrow", eyebrow);
+        context.setVariable("title", title);
+        context.setVariable("description", description);
+        context.setVariable("detailHeading", detailHeading);
+        context.setVariable("details", details);
+        context.setVariable("actionLabel", actionLabel);
+        context.setVariable("actionHint", actionHint);
+        context.setVariable("actionUrl", actionUrl);
+        context.setVariable("securityMessage", securityMessage);
 
         String html = templateEngine.process(ACCOUNT_ACTION_TEMPLATE, context);
         return new EmailContent(subject, html);
+    }
+
+    private Map<String, String> detail(String label, String value) {
+        return Map.of("label", label, "value", value);
     }
 
     private String buildActionUrl(String path, String token) {
@@ -151,9 +185,29 @@ public class TransactionalEmailFactory {
             case "LOGISTICS" -> "logística";
             case "AUDITOR" -> "auditor";
             case "REQUESTER" -> "solicitante";
-            case "VIEWER" -> "lector";
+            case "VIEWER" -> "consulta";
             default -> "miembro";
         };
+    }
+
+    private String customerAccessDescription(String role) {
+        if (role == null) {
+            return "Acceso como miembro";
+        }
+
+        return switch (role) {
+            case "ADMIN" -> "Gestión de empresa y miembros";
+            case "REQUESTER" -> "Solicitudes y seguimiento";
+            case "VIEWER" -> "Consulta y seguimiento";
+            default -> "Acceso como miembro";
+        };
+    }
+
+    private String capitalize(String value) {
+        if (value == null || value.isBlank()) {
+            return value;
+        }
+        return Character.toUpperCase(value.charAt(0)) + value.substring(1);
     }
 
     private String normalizeBaseUrl(String baseUrl) {

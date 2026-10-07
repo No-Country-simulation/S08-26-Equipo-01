@@ -1,6 +1,7 @@
 package com.nocountry.qualitytrack.requests.dto.request;
 
 import com.nocountry.qualitytrack.requests.enums.MaterialRequirementType;
+import com.nocountry.qualitytrack.requests.enums.RequestDeliveryMode;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
@@ -52,6 +53,40 @@ public class SubmitCustomerRequestForm {
     @Schema(description = "Fecha solicitada de entrega.", example = "2026-09-25", type = "string", format = "date")
     private LocalDate requestedDeliveryDate;
 
+    @NotNull
+    @Schema(description = "Cómo desea recibir el pedido.")
+    private RequestDeliveryMode deliveryMode;
+
+    @Schema(description = "Dirección guardada seleccionada cuando deliveryMode=SAVED_ADDRESS.")
+    private Long customerAddressId;
+
+    @Size(max = 120)
+    private String deliveryLabel;
+
+    @Size(max = 300)
+    private String deliveryAddress;
+
+    @Size(max = 120)
+    private String deliveryCity;
+
+    @Size(max = 120)
+    private String deliveryState;
+
+    @Size(max = 20)
+    private String deliveryPostalCode;
+
+    @Size(max = 100)
+    private String deliveryCountry;
+
+    @Size(max = 160)
+    private String deliveryContactName;
+
+    @Size(max = 30)
+    private String deliveryContactPhone;
+
+    @Size(max = 1000)
+    private String deliveryInstructions;
+
     @Valid
     @ArraySchema(
             arraySchema = @Schema(description = "Documentos iniciales opcionales. Cada elemento agrupa documentType, name, description y file. El máximo se controla mediante DOCUMENT_MAX_FILES_PER_REQUEST (5 por defecto)."),
@@ -67,7 +102,18 @@ public class SubmitCustomerRequestForm {
                 quantity,
                 materialRequirementType,
                 materialRequirement,
-                requestedDeliveryDate
+                requestedDeliveryDate,
+                deliveryMode,
+                customerAddressId,
+                deliveryLabel,
+                deliveryAddress,
+                deliveryCity,
+                deliveryState,
+                deliveryPostalCode,
+                deliveryCountry,
+                deliveryContactName,
+                deliveryContactPhone,
+                deliveryInstructions
         );
     }
 }

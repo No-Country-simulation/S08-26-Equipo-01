@@ -84,20 +84,25 @@ class DocumentCenterServiceTest {
         )).thenReturn(List.of(document));
         when(documentVersionRepository.findLatestByDocumentIds(List.of(7L)))
                 .thenReturn(List.of(version));
-        when(workOrderDocumentRepository.findAllByDocument_IdOrderByWorkOrder_IdAsc(7L))
+        when(workOrderDocumentRepository.findAllByDocumentIds(List.of(7L)))
                 .thenReturn(List.of(workOrderDocument));
-        when(materialLotRepository
-                .findAllByCertificateDocumentVersion_Document_IdOrderByIdAsc(7L))
-                .thenReturn(List.of());
-        when(deliveryRepository
-                .findAllByEvidenceDocumentVersion_Document_IdOrderByIdAsc(7L))
+        when(materialLotRepository.findAllByCertificateDocumentIds(List.of(7L)))
+                .thenReturn(List.of(materialLot));
+        when(deliveryRepository.findAllByEvidenceDocumentIds(List.of(7L)))
                 .thenReturn(List.of(delivery));
 
+        when(workOrderDocument.getDocument()).thenReturn(document);
         when(workOrderDocument.getWorkOrder()).thenReturn(workOrder);
         when(workOrder.getId()).thenReturn(70L);
+        when(workOrder.getWorkOrderNumber()).thenReturn("OT-00126");
         when(workOrderDocument.getDocumentVersion()).thenReturn(historicalVersion);
         when(historicalVersion.getId()).thenReturn(20L);
+        when(historicalVersion.getDocument()).thenReturn(document);
         when(historicalVersion.getVersion()).thenReturn(1);
+
+        when(materialLot.getId()).thenReturn(80L);
+        when(materialLot.getLotNumber()).thenReturn("304-0908");
+        when(materialLot.getCertificateDocumentVersion()).thenReturn(historicalVersion);
 
         when(delivery.getId()).thenReturn(90L);
         when(delivery.getEvidenceDocumentVersion()).thenReturn(version);
@@ -116,21 +121,32 @@ class DocumentCenterServiceTest {
         assertEquals(1, response.size());
         assertEquals(7L, response.get(0).id());
         assertEquals(21L, response.get(0).currentVersion().id());
+        assertEquals("Maquinados del Pacífico", response.get(0).customerName());
+        assertEquals("REQ-00126", response.get(0).requestNumber());
+        assertEquals("CASE-00126", response.get(0).caseNumber());
         assertEquals(List.of(70L), response.get(0).workOrderIds());
+        assertEquals(List.of("OT-00126"), response.get(0).workOrderNumbers());
+        assertEquals(List.of(80L), response.get(0).materialLotIds());
+        assertEquals(List.of("304-0908"), response.get(0).materialLotNumbers());
         assertEquals(List.of(90L), response.get(0).deliveryIds());
         assertTrue(response.get(0).contexts().contains(DocumentContext.CASE));
         assertTrue(response.get(0).contexts().contains(DocumentContext.WORK_ORDER));
+        assertTrue(response.get(0).contexts().contains(DocumentContext.MATERIAL));
         assertTrue(response.get(0).contexts().contains(DocumentContext.DELIVERY));
 
-        assertEquals(2, response.get(0).references().size());
+        assertEquals(3, response.get(0).references().size());
         assertEquals(DocumentContext.WORK_ORDER, response.get(0).references().get(0).context());
         assertEquals(70L, response.get(0).references().get(0).resourceId());
         assertEquals(20L, response.get(0).references().get(0).documentVersionId());
         assertEquals(1, response.get(0).references().get(0).version());
-        assertEquals(DocumentContext.DELIVERY, response.get(0).references().get(1).context());
-        assertEquals(90L, response.get(0).references().get(1).resourceId());
-        assertEquals(21L, response.get(0).references().get(1).documentVersionId());
-        assertEquals(2, response.get(0).references().get(1).version());
+        assertEquals(DocumentContext.MATERIAL, response.get(0).references().get(1).context());
+        assertEquals(80L, response.get(0).references().get(1).resourceId());
+        assertEquals(20L, response.get(0).references().get(1).documentVersionId());
+        assertEquals(1, response.get(0).references().get(1).version());
+        assertEquals(DocumentContext.DELIVERY, response.get(0).references().get(2).context());
+        assertEquals(90L, response.get(0).references().get(2).resourceId());
+        assertEquals(21L, response.get(0).references().get(2).documentVersionId());
+        assertEquals(2, response.get(0).references().get(2).version());
 
         verify(accessService).requireInternalReader(10L);
     }
@@ -150,13 +166,11 @@ class DocumentCenterServiceTest {
         )).thenReturn(List.of(document));
         when(documentVersionRepository.findLatestByDocumentIds(List.of(7L)))
                 .thenReturn(List.of(version));
-        when(workOrderDocumentRepository.findAllByDocument_IdOrderByWorkOrder_IdAsc(7L))
+        when(workOrderDocumentRepository.findAllByDocumentIds(List.of(7L)))
                 .thenReturn(List.of());
-        when(materialLotRepository
-                .findAllByCertificateDocumentVersion_Document_IdOrderByIdAsc(7L))
+        when(materialLotRepository.findAllByCertificateDocumentIds(List.of(7L)))
                 .thenReturn(List.of());
-        when(deliveryRepository
-                .findAllByEvidenceDocumentVersion_Document_IdOrderByIdAsc(7L))
+        when(deliveryRepository.findAllByEvidenceDocumentIds(List.of(7L)))
                 .thenReturn(List.of());
 
         var response = service.search(
@@ -184,10 +198,13 @@ class DocumentCenterServiceTest {
         lenient().when(document.getCreatedAt()).thenReturn(Instant.parse("2026-09-20T10:00:00Z"));
 
         lenient().when(jobCase.getId()).thenReturn(12L);
+        lenient().when(jobCase.getCaseNumber()).thenReturn("CASE-00126");
         lenient().when(jobCase.getCustomerRequest()).thenReturn(customerRequest);
         lenient().when(customerRequest.getId()).thenReturn(30L);
+        lenient().when(customerRequest.getRequestNumber()).thenReturn("REQ-00126");
         lenient().when(customerRequest.getCustomer()).thenReturn(customer);
         lenient().when(customer.getId()).thenReturn(40L);
+        lenient().when(customer.getName()).thenReturn("Maquinados del Pacífico");
 
         lenient().when(creator.getId()).thenReturn(10L);
         lenient().when(creator.getFirstName()).thenReturn("Ana");

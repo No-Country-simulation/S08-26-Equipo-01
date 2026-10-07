@@ -15,7 +15,7 @@ import java.lang.annotation.Target;
 @Documented
 @Operation(
         summary = "Consultar inspección de Calidad",
-        description = "Devuelve la inspección, sus mediciones y la no conformidad asociada cuando exista."
+        description = "Devuelve la inspección, sus controles de calidad y la no conformidad asociada cuando exista."
 )
 @ApiResponses({
         @ApiResponse(responseCode = "200", description = "Inspección consultada correctamente"),

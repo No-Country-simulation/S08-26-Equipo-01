@@ -1,6 +1,7 @@
 package com.nocountry.qualitytrack.workorders.service;
 
 import com.nocountry.qualitytrack.quotations.entity.Quotation;
+import com.nocountry.qualitytrack.quotations.repository.QuotationRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
 import com.nocountry.qualitytrack.users.entity.User;
@@ -26,6 +27,7 @@ import static org.mockito.Mockito.when;
 class WorkOrderServiceTest {
 
     @Mock private WorkOrderRepository workOrderRepository;
+    @Mock private QuotationRepository quotationRepository;
     @Mock private WorkOrderAccessPolicy accessPolicy;
     @Mock private WorkOrderSourceService sourceService;
     @Mock private WorkOrderDocumentService documentService;
@@ -40,6 +42,7 @@ class WorkOrderServiceTest {
     void setUp() {
         service = new WorkOrderService(
                 workOrderRepository,
+                quotationRepository,
                 accessPolicy,
                 sourceService,
                 documentService

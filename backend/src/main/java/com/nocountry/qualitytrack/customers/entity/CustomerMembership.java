@@ -133,6 +133,14 @@ public class CustomerMembership {
         this.removedAt = null;
     }
 
+    public void changeRole(CustomerMembershipRole role) {
+        if (status != CustomerMembershipStatus.ACTIVE) {
+            throw new IllegalStateException("Solo una membresía activa puede cambiar de rol.");
+        }
+
+        this.role = role;
+    }
+
     public void remove(User removedByUser, Instant removedAt) {
         if (status != CustomerMembershipStatus.ACTIVE) {
             throw new IllegalStateException("Solo una membresía activa puede retirarse.");

@@ -3,6 +3,7 @@ package com.nocountry.qualitytrack.workorders.dto.response;
 import com.nocountry.qualitytrack.requests.dto.response.CaseInformationRequestResponse;
 import com.nocountry.qualitytrack.requests.dto.response.CaseMaterialSpecificationResponse;
 import com.nocountry.qualitytrack.requests.dto.response.RequestDocumentResponse;
+import com.nocountry.qualitytrack.requests.dto.response.RequestDeliveryDestinationResponse;
 import com.nocountry.qualitytrack.requests.entity.CustomerRequest;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.requests.enums.MaterialRequirementType;
@@ -25,6 +26,7 @@ public record WorkOrderSourceResponse(
         MaterialRequirementType materialRequirementType,
         String materialRequirement,
         LocalDate requestedDeliveryDate,
+        RequestDeliveryDestinationResponse deliveryDestination,
         Long requestedByUserId,
         String requestedByName,
         CaseMaterialSpecificationResponse materialSpecification,
@@ -53,6 +55,7 @@ public record WorkOrderSourceResponse(
                 request.getMaterialRequirementType(),
                 request.getMaterialRequirement(),
                 request.getRequestedDeliveryDate(),
+                RequestDeliveryDestinationResponse.from(request.getDeliveryDestination()),
                 request.getRequestedByUser().getId(),
                 fullName(request.getRequestedByUser()),
                 materialSpecification,

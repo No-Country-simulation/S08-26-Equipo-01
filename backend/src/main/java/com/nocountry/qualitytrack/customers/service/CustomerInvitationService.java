@@ -49,6 +49,12 @@ public class CustomerInvitationService {
     private final PasswordEncoder passwordEncoder;
     private final Duration invitationExpiration;
 
+    @Value("${app.demo.enabled:false}")
+    private boolean demoEnabled;
+
+    @Value("${app.demo.customer-email:cliente.demo@qualitytrack.com}")
+    private String demoCustomerEmail;
+
     public CustomerInvitationService(
             CustomerRepository customerRepository,
             CustomerMembershipRepository membershipRepository,
@@ -81,6 +87,8 @@ public class CustomerInvitationService {
             Long customerId,
             CreateCustomerInvitationRequest request
     ) {
+        requireDemoInvitationMutationAllowed(currentUserId);
+
         Customer customer = customerRepository.findByIdForUpdate(customerId)
                 .orElseThrow(() -> new BusinessException(
                         ApiErrorCode.RESOURCE_NOT_FOUND,
@@ -129,6 +137,39 @@ public class CustomerInvitationService {
                 .stream()
                 .map(CustomerInvitationResponse::from)
                 .toList();
+    }
+
+    @Transactional
+    public void cancelInvitation(
+            Long currentUserId,
+            Long customerId,
+            Long invitationId
+    ) {
+        requireDemoInvitationMutationAllowed(currentUserId);
+        requireActiveAdmin(currentUserId, customerId);
+
+        CustomerInvitation invitation = invitationRepository.findByIdForUpdate(invitationId)
+                .orElseThrow(() -> new BusinessException(
+                        ApiErrorCode.RESOURCE_NOT_FOUND,
+                        "No se encontró la invitación."
+                ));
+
+        if (!customerId.equals(invitation.getCustomer().getId())) {
+            throw new BusinessException(
+                    ApiErrorCode.RESOURCE_NOT_FOUND,
+                    "No se encontró la invitación."
+            );
+        }
+
+        if (invitation.getStatus() != CustomerInvitationStatus.PENDING) {
+            throw new BusinessException(
+                    ApiErrorCode.DATA_CONFLICT,
+                    "Solo una invitación pendiente puede cancelarse."
+            );
+        }
+
+        invitation.cancel();
+        invitationRepository.save(invitation);
     }
 
     @Transactional(readOnly = true)
@@ -356,6 +397,23 @@ public class CustomerInvitationService {
         }
 
         return membership;
+    }
+
+    private void requireDemoInvitationMutationAllowed(Long userId) {
+        if (!demoEnabled) {
+            return;
+        }
+
+        userRepository.findById(userId)
+                .map(User::getEmail)
+                .map(this::normalizeEmail)
+                .filter(email -> email.equals(normalizeEmail(demoCustomerEmail)))
+                .ifPresent(email -> {
+                    throw new BusinessException(
+                            ApiErrorCode.ACCESS_DENIED,
+                            "Las invitaciones están deshabilitadas para la empresa de demostración."
+                    );
+                });
     }
 
     private BusinessException invalidInvitation() {

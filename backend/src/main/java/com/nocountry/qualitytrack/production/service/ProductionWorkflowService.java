@@ -76,7 +76,7 @@ public class ProductionWorkflowService {
             conflict("La operación ya fue completada.");
         }
 
-        requirePreviousOperationsCompleted(operation);
+        requirePrerequisitesCompleted(operation);
 
         User operator = request.operatorId() == null
                 ? actor
@@ -505,25 +505,20 @@ public class ProductionWorkflowService {
         }
     }
 
-    private void requirePreviousOperationsCompleted(RoutingOperation operation) {
-        List<RoutingOperation> operations = routingOperationRepository
-                .findAllByRoutingSheet_IdOrderBySequenceNumberAsc(
-                        operation.getRoutingSheet().getId()
-                );
+    private void requirePrerequisitesCompleted(RoutingOperation operation) {
+        List<String> pendingCodes = operation.getPrerequisites().stream()
+                .filter(prerequisite -> !executionRepository.existsByRoutingOperation_IdAndStatus(
+                        prerequisite.getId(),
+                        OperationExecutionStatus.COMPLETED
+                ))
+                .map(RoutingOperation::getCode)
+                .toList();
 
-        for (RoutingOperation previous : operations) {
-            if (previous.getSequenceNumber() >= operation.getSequenceNumber()) {
-                break;
-            }
-            if (!executionRepository.existsByRoutingOperation_IdAndStatus(
-                    previous.getId(),
-                    OperationExecutionStatus.COMPLETED
-            )) {
-                conflict(
-                        "La operación anterior " + previous.getCode()
-                                + " debe completarse antes de iniciar esta operación."
-                );
-            }
+        if (!pendingCodes.isEmpty()) {
+            conflict(
+                    "La operación espera a que finalice: "
+                            + String.join(", ", pendingCodes) + "."
+            );
         }
     }
 

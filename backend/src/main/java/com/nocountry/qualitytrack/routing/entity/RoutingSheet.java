@@ -30,6 +30,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -148,8 +149,36 @@ public class RoutingSheet {
             String instructions,
             Integer estimatedMinutes
     ) {
+        return addOperation(
+                sequenceNumber,
+                code,
+                name,
+                instructions,
+                estimatedMinutes,
+                false
+        );
+    }
+
+    public RoutingOperation addOperation(
+            Integer sequenceNumber,
+            String code,
+            String name,
+            String instructions,
+            Integer estimatedMinutes,
+            boolean resequenceOperations
+    ) {
         requireEditable();
-        requireSequenceAvailable(sequenceNumber, null);
+        requirePositive(sequenceNumber, "La secuencia de la operación debe ser mayor a cero.");
+
+        boolean occupied = isSequenceOccupied(sequenceNumber, null);
+        if (occupied && !resequenceOperations) {
+            throw new IllegalArgumentException(
+                    "Ya existe una operación con esa secuencia en la hoja de ruta."
+            );
+        }
+        if (occupied) {
+            shiftForInsert(sequenceNumber);
+        }
 
         RoutingOperation operation = RoutingOperation.create(
                 this,
@@ -159,6 +188,12 @@ public class RoutingSheet {
                 instructions,
                 estimatedMinutes
         );
+
+        operations.stream()
+                .filter(previous -> previous.getSequenceNumber() < sequenceNumber)
+                .max(Comparator.comparing(RoutingOperation::getSequenceNumber))
+                .ifPresent(previous -> operation.replacePrerequisites(List.of(previous)));
+
         operations.add(operation);
         touch();
         return operation;
@@ -172,15 +207,65 @@ public class RoutingSheet {
             String instructions,
             Integer estimatedMinutes
     ) {
+        return updateOperation(
+                operationId,
+                sequenceNumber,
+                code,
+                name,
+                instructions,
+                estimatedMinutes,
+                false
+        );
+    }
+
+    public RoutingOperation updateOperation(
+            Long operationId,
+            Integer sequenceNumber,
+            String code,
+            String name,
+            String instructions,
+            Integer estimatedMinutes,
+            boolean resequenceOperations
+    ) {
         requireEditable();
         RoutingOperation operation = findOperation(operationId)
                 .orElseThrow(() -> new IllegalArgumentException(
                         "No se encontró la operación dentro de la hoja de ruta."
                 ));
-        requireSequenceAvailable(sequenceNumber, operation.getId());
+        requirePositive(sequenceNumber, "La secuencia de la operación debe ser mayor a cero.");
+
+        Integer previousSequence = operation.getSequenceNumber();
+        if (!Objects.equals(previousSequence, sequenceNumber)) {
+            boolean occupied = isSequenceOccupied(sequenceNumber, operation.getId());
+            if (occupied && !resequenceOperations) {
+                throw new IllegalArgumentException(
+                        "Ya existe una operación con esa secuencia en la hoja de ruta."
+                );
+            }
+            if (occupied) {
+                shiftForMove(operation, previousSequence, sequenceNumber);
+            }
+        }
+
         operation.update(sequenceNumber, code, name, instructions, estimatedMinutes);
         touch();
         return operation;
+    }
+
+    public void validateDependencyOrder() {
+        for (RoutingOperation operation : operations) {
+            for (RoutingOperation prerequisite : operation.getPrerequisites()) {
+                if (prerequisite.getSequenceNumber() >= operation.getSequenceNumber()) {
+                    throw new IllegalArgumentException(
+                            "El cambio de secuencia dejaría a "
+                                    + operation.getCode()
+                                    + " antes de su requisito "
+                                    + prerequisite.getCode()
+                                    + ". Ajusta primero las dependencias de la ruta."
+                    );
+                }
+            }
+        }
     }
 
     public void removeOperation(Long operationId) {
@@ -210,6 +295,7 @@ public class RoutingSheet {
                     "La hoja de ruta necesita al menos una operación antes de aprobarse."
             );
         }
+        validateDependencyOrder();
         this.approvedByUser = Objects.requireNonNull(actor);
         this.approvedAt = Objects.requireNonNull(approvedAt);
         this.status = RoutingSheetStatus.APPROVED;
@@ -238,6 +324,7 @@ public class RoutingSheet {
                     "La hoja de ruta necesita operaciones antes de liberarse."
             );
         }
+        validateDependencyOrder();
         this.releasedByUser = Objects.requireNonNull(actor);
         this.releasedAt = Objects.requireNonNull(releasedAt);
         this.status = RoutingSheetStatus.RELEASED;
@@ -247,6 +334,80 @@ public class RoutingSheet {
         return operations.stream()
                 .mapToInt(RoutingOperation::getEstimatedMinutes)
                 .sum();
+    }
+
+    private void shiftForInsert(Integer targetSequence) {
+        operations.stream()
+                .filter(operation -> operation.getSequenceNumber() >= targetSequence)
+                .sorted(Comparator.comparing(RoutingOperation::getSequenceNumber).reversed())
+                .forEach(operation -> resequenceOperation(
+                        operation,
+                        operation.getSequenceNumber() + 1
+                ));
+    }
+
+    private void shiftForMove(
+            RoutingOperation movingOperation,
+            Integer previousSequence,
+            Integer targetSequence
+    ) {
+        if (targetSequence < previousSequence) {
+            operations.stream()
+                    .filter(operation -> operation != movingOperation)
+                    .filter(operation -> operation.getSequenceNumber() >= targetSequence)
+                    .filter(operation -> operation.getSequenceNumber() < previousSequence)
+                    .sorted(Comparator.comparing(RoutingOperation::getSequenceNumber).reversed())
+                    .forEach(operation -> resequenceOperation(
+                            operation,
+                            operation.getSequenceNumber() + 1
+                    ));
+            return;
+        }
+
+        operations.stream()
+                .filter(operation -> operation != movingOperation)
+                .filter(operation -> operation.getSequenceNumber() > previousSequence)
+                .filter(operation -> operation.getSequenceNumber() <= targetSequence)
+                .sorted(Comparator.comparing(RoutingOperation::getSequenceNumber))
+                .forEach(operation -> resequenceOperation(
+                        operation,
+                        operation.getSequenceNumber() - 1
+                ));
+    }
+
+    private void resequenceOperation(
+            RoutingOperation operation,
+            Integer nextSequence
+    ) {
+        Integer previousSequence = operation.getSequenceNumber();
+        String nextCode = isSuggestedCode(operation.getCode(), previousSequence)
+                ? suggestedCode(nextSequence)
+                : operation.getCode();
+
+        operation.update(
+                nextSequence,
+                nextCode,
+                operation.getName(),
+                operation.getInstructions(),
+                operation.getEstimatedMinutes()
+        );
+    }
+
+    private boolean isSequenceOccupied(Integer sequenceNumber, Long ignoredOperationId) {
+        return operations.stream()
+                .anyMatch(operation ->
+                        (ignoredOperationId == null
+                                || !Objects.equals(operation.getId(), ignoredOperationId))
+                                && Objects.equals(operation.getSequenceNumber(), sequenceNumber)
+                );
+    }
+
+    private boolean isSuggestedCode(String code, Integer sequenceNumber) {
+        return code != null && code.equalsIgnoreCase(suggestedCode(sequenceNumber));
+    }
+
+    private String suggestedCode(Integer sequenceNumber) {
+        return "OP-" + (sequenceNumber * 10);
     }
 
     private void touch() {
@@ -298,21 +459,6 @@ public class RoutingSheet {
         )) {
             throw new IllegalArgumentException(
                     "La no conformidad no pertenece a la orden de trabajo del routing."
-            );
-        }
-    }
-
-    private void requireSequenceAvailable(Integer sequenceNumber, Long ignoredOperationId) {
-        requirePositive(sequenceNumber, "La secuencia de la operación debe ser mayor a cero.");
-        boolean duplicated = operations.stream()
-                .anyMatch(operation ->
-                        (ignoredOperationId == null
-                                || !Objects.equals(operation.getId(), ignoredOperationId))
-                                && Objects.equals(operation.getSequenceNumber(), sequenceNumber)
-                );
-        if (duplicated) {
-            throw new IllegalArgumentException(
-                    "Ya existe una operación con esa secuencia en la hoja de ruta."
             );
         }
     }

@@ -42,7 +42,11 @@ public class EmailConfig {
                 .requestFactory(requestFactory)
                 .build();
 
-        EmailService resendEmailService = new ResendEmailService(restClient, resendFrom.trim(), emailFactory);
+        EmailService resendEmailService = new ResendEmailService(
+                restClient,
+                resendFrom.trim(),
+                emailFactory
+        );
         return new AfterCommitEmailService(resendEmailService);
     }
 

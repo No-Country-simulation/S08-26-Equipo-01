@@ -13,6 +13,7 @@ public enum TraceabilityResourceType {
     MATERIAL_LOT,
     QUALITY_INSPECTION,
     QUALITY_MEASUREMENT,
+    QUALITY_CHECK,
     NON_CONFORMITY,
     DELIVERY
 }
