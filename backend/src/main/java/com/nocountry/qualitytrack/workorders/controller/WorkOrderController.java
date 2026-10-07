@@ -13,6 +13,7 @@ import com.nocountry.qualitytrack.workorders.documentation.UpdateWorkOrderPlanni
 import com.nocountry.qualitytrack.workorders.dto.request.CancelWorkOrderRequest;
 import com.nocountry.qualitytrack.workorders.dto.request.PinWorkOrderDocumentRequest;
 import com.nocountry.qualitytrack.workorders.dto.request.UpdateWorkOrderPlanningRequest;
+import com.nocountry.qualitytrack.workorders.dto.response.PendingWorkOrderResponse;
 import com.nocountry.qualitytrack.workorders.dto.response.WorkOrder360Response;
 import com.nocountry.qualitytrack.workorders.dto.response.WorkOrderDetailResponse;
 import com.nocountry.qualitytrack.workorders.dto.response.WorkOrderDocumentResponse;
@@ -54,6 +55,17 @@ public class WorkOrderController {
                 ApiSuccessCode.WORK_ORDERS_RETRIEVED,
                 "Órdenes de trabajo consultadas correctamente.",
                 workOrderService.list(currentUserId)
+        ));
+    }
+
+    @GetMapping("/pending-creation")
+    public ResponseEntity<ApiResponse<List<PendingWorkOrderResponse>>> listPendingCreation(
+            @CurrentUserId Long currentUserId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success(
+                ApiSuccessCode.WORK_ORDER_CANDIDATES_RETRIEVED,
+                "Pendientes de crear orden de trabajo consultados correctamente.",
+                workOrderService.listPendingCreation(currentUserId)
         ));
     }
 

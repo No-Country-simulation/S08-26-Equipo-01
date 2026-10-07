@@ -44,23 +44,13 @@ import static org.mockito.Mockito.when;
 @ExtendWith(MockitoExtension.class)
 class InternalUserInvitationServiceTest {
 
-    @Mock
-    private UserRepository userRepository;
-
-    @Mock
-    private UserSystemRoleRepository roleRepository;
-
-    @Mock
-    private EmailVerificationTokenRepository tokenRepository;
-
-    @Mock
-    private OpaqueTokenService opaqueTokenService;
-
-    @Mock
-    private EmailService emailService;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
+    @Mock private UserRepository userRepository;
+    @Mock private UserSystemRoleRepository roleRepository;
+    @Mock private EmailVerificationTokenRepository tokenRepository;
+    @Mock private OpaqueTokenService opaqueTokenService;
+    @Mock private EmailService emailService;
+    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private DemoAccountPolicy demoAccountPolicy;
 
     private InternalUserInvitationService service;
 
@@ -73,6 +63,7 @@ class InternalUserInvitationServiceTest {
                 opaqueTokenService,
                 emailService,
                 passwordEncoder,
+                demoAccountPolicy,
                 Duration.ofHours(72)
         );
     }

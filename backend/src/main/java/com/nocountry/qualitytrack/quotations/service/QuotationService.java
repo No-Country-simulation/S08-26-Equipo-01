@@ -6,7 +6,9 @@ import com.nocountry.qualitytrack.quotations.dto.response.QuotationDetailRespons
 import com.nocountry.qualitytrack.quotations.dto.response.QuotationResponse;
 import com.nocountry.qualitytrack.quotations.entity.Quotation;
 import com.nocountry.qualitytrack.quotations.enums.CustomerQuotationStatus;
+import com.nocountry.qualitytrack.quotations.enums.QuotationAdjustmentStatus;
 import com.nocountry.qualitytrack.quotations.enums.QuotationStatus;
+import com.nocountry.qualitytrack.quotations.repository.QuotationAdjustmentRequestRepository;
 import com.nocountry.qualitytrack.quotations.repository.QuotationRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
@@ -17,8 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.ZoneId;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,6 +30,7 @@ import java.util.stream.Collectors;
 public class QuotationService {
 
     private final QuotationRepository quotationRepository;
+    private final QuotationAdjustmentRequestRepository adjustmentRequestRepository;
     private final QuotationAccessPolicy accessPolicy;
     private final QuotationSourceService quotationSourceService;
 
@@ -36,11 +41,14 @@ public class QuotationService {
     public List<QuotationResponse> listInternal(Long currentUserId) {
         accessPolicy.requireInternalReader(currentUserId);
 
-        return quotationRepository.findCurrentRevisions()
+        List<Quotation> quotations = quotationRepository.findCurrentRevisions();
+        Set<Long> openAdjustmentDraftIds = openAdjustmentDraftIds(quotations);
+
+        return quotations
                 .stream()
                 .map(quotation -> QuotationResponse.from(
                         quotation,
-                        effectiveInternalStatus(quotation)
+                        effectiveInternalStatus(quotation, openAdjustmentDraftIds)
                 ))
                 .toList();
     }
@@ -64,12 +72,15 @@ public class QuotationService {
         accessPolicy.requireInternalReader(currentUserId);
         Quotation anchor = requireDetail(quotationId);
 
-        return quotationRepository
-                .findAllByQuotationNumberOrderByRevisionDesc(anchor.getQuotationNumber())
+        List<Quotation> revisions = quotationRepository
+                .findAllByQuotationNumberOrderByRevisionDesc(anchor.getQuotationNumber());
+        Set<Long> openAdjustmentDraftIds = openAdjustmentDraftIds(revisions);
+
+        return revisions
                 .stream()
                 .map(quotation -> QuotationResponse.from(
                         quotation,
-                        effectiveInternalStatus(quotation)
+                        effectiveInternalStatus(quotation, openAdjustmentDraftIds)
                 ))
                 .toList();
     }
@@ -115,13 +126,15 @@ public class QuotationService {
                 ).orElse(null)
                 : null;
 
-        boolean adjustmentPending = nextRevision != null
+        boolean hasFollowingAdjustment = nextRevision != null
+                && nextRevision.getAdjustmentNotes() != null;
+        boolean adjustmentPending = hasFollowingAdjustment
                 && nextRevision.getStatus() == QuotationStatus.DRAFT;
 
-        String adjustmentNotes = adjustmentPending
+        String adjustmentNotes = hasFollowingAdjustment
                 ? nextRevision.getAdjustmentNotes()
                 : quotation.getAdjustmentNotes();
-        String adjustmentResponse = adjustmentPending
+        String adjustmentResponse = hasFollowingAdjustment
                 ? null
                 : quotation.getAdjustmentResponse();
 
@@ -129,7 +142,8 @@ public class QuotationService {
                 quotation,
                 customerStatusFor(quotation, adjustmentPending),
                 adjustmentNotes,
-                adjustmentResponse
+                adjustmentResponse,
+                quotationSourceService.getForCustomer(quotation)
         );
     }
 
@@ -174,7 +188,42 @@ public class QuotationService {
                 && quotation.isExpiredOn(today())) {
             return QuotationStatus.EXPIRED;
         }
+        if (quotation.getStatus() == QuotationStatus.DRAFT
+                && adjustmentRequestRepository.existsByDraftQuotation_IdAndStatus(
+                        quotation.getId(),
+                        QuotationAdjustmentStatus.OPEN
+                )) {
+            return QuotationStatus.ADJUSTMENT_REQUESTED;
+        }
         return quotation.getStatus();
+    }
+
+    private QuotationStatus effectiveInternalStatus(
+            Quotation quotation,
+            Set<Long> openAdjustmentDraftIds
+    ) {
+        if (quotation.getStatus() == QuotationStatus.SENT
+                && quotation.isExpiredOn(today())) {
+            return QuotationStatus.EXPIRED;
+        }
+        if (quotation.getStatus() == QuotationStatus.DRAFT
+                && openAdjustmentDraftIds.contains(quotation.getId())) {
+            return QuotationStatus.ADJUSTMENT_REQUESTED;
+        }
+        return quotation.getStatus();
+    }
+
+    private Set<Long> openAdjustmentDraftIds(List<Quotation> quotations) {
+        List<Long> draftIds = quotations.stream()
+                .filter(quotation -> quotation.getStatus() == QuotationStatus.DRAFT)
+                .map(Quotation::getId)
+                .toList();
+
+        if (draftIds.isEmpty()) {
+            return Set.of();
+        }
+
+        return new HashSet<>(adjustmentRequestRepository.findOpenDraftQuotationIds(draftIds));
     }
 
     private CustomerQuotationStatus customerStatusFor(

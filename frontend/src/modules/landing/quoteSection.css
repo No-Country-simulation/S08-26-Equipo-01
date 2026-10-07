@@ -1,0 +1,89 @@
+.qt-quote-section {
+  height: 230svh;
+  min-height: 230svh;
+}
+
+.qt-quote-pinned {
+  top: 64px;
+  height: calc(100svh - 64px);
+  min-height: calc(100svh - 64px);
+}
+
+.qt-quote-sheet {
+  isolation: isolate;
+  transform-origin: 50% 58%;
+}
+
+.qt-quote-sheet::before {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: '';
+  pointer-events: none;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.014) 1px, transparent 1px);
+  background-size: 22px 22px;
+  opacity: 0.28;
+  mask-image: linear-gradient(to bottom, black, transparent 82%);
+}
+
+.qt-quote-sheet::after {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 72px;
+  height: 72px;
+  content: '';
+  pointer-events: none;
+  border-top: 1px solid rgba(251, 191, 36, 0.14);
+  border-right: 1px solid rgba(251, 191, 36, 0.14);
+  border-top-right-radius: 28px;
+  opacity: 0.9;
+}
+
+.qt-quote-version {
+  transform-origin: 50% 50%;
+}
+
+.qt-quote-version::after {
+  position: absolute;
+  inset: 8px;
+  content: '';
+  pointer-events: none;
+  border: 1px dashed rgba(251, 191, 36, 0.05);
+  border-radius: 20px;
+}
+
+@media (min-width: 1024px) {
+  .qt-quote-section {
+    height: 250svh;
+    min-height: 250svh;
+  }
+
+  .qt-quote-pinned {
+    top: 72px;
+    height: calc(100svh - 72px);
+    min-height: calc(100svh - 72px);
+  }
+}
+
+@media (max-width: 1023px) {
+  .qt-quote-sheet {
+    transform-origin: 50% 50%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qt-quote-section {
+    height: auto;
+    min-height: 100svh;
+  }
+
+  .qt-quote-pinned {
+    position: relative;
+    top: 0;
+    height: auto;
+    min-height: 100svh;
+  }
+}

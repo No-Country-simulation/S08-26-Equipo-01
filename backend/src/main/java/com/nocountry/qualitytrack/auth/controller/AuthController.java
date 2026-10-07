@@ -6,6 +6,7 @@ import com.nocountry.qualitytrack.auth.documentation.RegisterApiDocs;
 import com.nocountry.qualitytrack.auth.documentation.ResendVerificationApiDocs;
 import com.nocountry.qualitytrack.auth.documentation.ResetPasswordApiDocs;
 import com.nocountry.qualitytrack.auth.documentation.VerifyEmailApiDocs;
+import com.nocountry.qualitytrack.auth.dto.request.DemoLoginRequest;
 import com.nocountry.qualitytrack.auth.dto.request.ForgotPasswordRequest;
 import com.nocountry.qualitytrack.auth.dto.request.LoginRequest;
 import com.nocountry.qualitytrack.auth.dto.request.RegisterRequest;
@@ -15,6 +16,7 @@ import com.nocountry.qualitytrack.auth.dto.request.VerifyEmailRequest;
 import com.nocountry.qualitytrack.auth.dto.response.LoginResponse;
 import com.nocountry.qualitytrack.auth.dto.response.RegisterResponse;
 import com.nocountry.qualitytrack.auth.service.AuthService;
+import com.nocountry.qualitytrack.auth.service.DemoAuthService;
 import com.nocountry.qualitytrack.auth.service.EmailVerificationService;
 import com.nocountry.qualitytrack.auth.service.PasswordRecoveryService;
 import com.nocountry.qualitytrack.auth.service.RegistrationService;
@@ -42,6 +44,7 @@ public class AuthController {
     private final RegistrationService registrationService;
     private final EmailVerificationService emailVerificationService;
     private final AuthService authService;
+    private final DemoAuthService demoAuthService;
     private final PasswordRecoveryService passwordRecoveryService;
 
     @RegisterApiDocs
@@ -92,6 +95,19 @@ public class AuthController {
         return ResponseEntity.ok(ApiResponse.success(
                 ApiSuccessCode.AUTHENTICATED,
                 "Autenticación exitosa.",
+                response
+        ));
+    }
+
+    @PostMapping("/demo-login")
+    public ResponseEntity<ApiResponse<LoginResponse>> demoLogin(
+            @Valid @RequestBody DemoLoginRequest request
+    ) {
+        LoginResponse response = demoAuthService.login(request.accountType());
+
+        return ResponseEntity.ok(ApiResponse.success(
+                ApiSuccessCode.AUTHENTICATED,
+                "Acceso de demostración iniciado.",
                 response
         ));
     }

@@ -15,6 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -115,6 +116,14 @@ public class Quotation {
     @OrderBy("lineNumber ASC")
     private List<QuotationItem> items = new ArrayList<>();
 
+    @OneToOne(
+            mappedBy = "draftQuotation",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    private QuotationAdjustmentRequest adjustmentRequest;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -161,7 +170,14 @@ public class Quotation {
             throw new IllegalStateException("Solo una revisión SENT puede generar una nueva revisión.");
         }
 
-        return copyRevision(previous, createdByUser, adjustmentNotes);
+        Quotation next = copyRevision(previous, createdByUser, adjustmentNotes);
+        next.adjustmentRequest = QuotationAdjustmentRequest.open(
+                previous,
+                next,
+                null,
+                adjustmentNotes
+        );
+        return next;
     }
 
     public static Quotation reissuedFrom(
@@ -257,7 +273,18 @@ public class Quotation {
 
     public void send(Instant sentAt) {
         requireDraft();
-        this.sentAt = Objects.requireNonNull(sentAt);
+        Instant effectiveSentAt = Objects.requireNonNull(sentAt);
+
+        if (adjustmentRequest != null) {
+            if (adjustmentResponse == null) {
+                throw new IllegalStateException(
+                        "Debes responder la solicitud de ajuste antes de enviar la nueva revisión."
+                );
+            }
+            adjustmentRequest.resolve(adjustmentResponse, effectiveSentAt);
+        }
+
+        this.sentAt = effectiveSentAt;
         this.status = QuotationStatus.SENT;
     }
 

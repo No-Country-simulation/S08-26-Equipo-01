@@ -120,8 +120,6 @@ class ProductionWorkflowServiceTest {
     void firstExecutionStartsProduction() {
         when(accessPolicy.requireProductionActor(10L)).thenReturn(actor);
         stubLockedOperation(firstOperation);
-        when(routingOperationRepository.findAllByRoutingSheet_IdOrderBySequenceNumberAsc(20L))
-                .thenReturn(List.of(firstOperation, secondOperation));
         when(executionRepository.countByRoutingOperation_Id(101L)).thenReturn(0L);
         when(executionRepository.saveAndFlush(any(OperationExecution.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
@@ -144,8 +142,6 @@ class ProductionWorkflowServiceTest {
     void cannotSkipPreviousOperation() {
         when(accessPolicy.requireProductionActor(10L)).thenReturn(actor);
         stubLockedOperation(secondOperation);
-        when(routingOperationRepository.findAllByRoutingSheet_IdOrderBySequenceNumberAsc(20L))
-                .thenReturn(List.of(firstOperation, secondOperation));
         when(executionRepository.existsByRoutingOperation_IdAndStatus(
                 102L,
                 OperationExecutionStatus.IN_PROGRESS
@@ -179,8 +175,6 @@ class ProductionWorkflowServiceTest {
 
         when(accessPolicy.requireProductionActor(10L)).thenReturn(actor);
         stubLockedOperation(firstOperation);
-        when(routingOperationRepository.findAllByRoutingSheet_IdOrderBySequenceNumberAsc(20L))
-                .thenReturn(List.of(firstOperation, secondOperation));
         when(machineRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(machine));
 
         assertThrows(
@@ -261,8 +255,6 @@ class ProductionWorkflowServiceTest {
                 .thenReturn(Optional.of(workOrder));
         when(routingOperationRepository.findByIdForUpdate(201L))
                 .thenReturn(Optional.of(reworkOperation));
-        when(routingOperationRepository.findAllByRoutingSheet_IdOrderBySequenceNumberAsc(30L))
-                .thenReturn(List.of(reworkOperation));
         when(executionRepository.countByRoutingOperation_Id(201L)).thenReturn(0L);
         when(executionRepository.saveAndFlush(any(OperationExecution.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));

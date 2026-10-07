@@ -2,6 +2,7 @@ package com.nocountry.qualitytrack.users.entity;
 
 import com.nocountry.qualitytrack.users.enums.AccountType;
 import com.nocountry.qualitytrack.users.enums.UserStatus;
+import com.nocountry.qualitytrack.users.util.PersonNameNormalizer;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -61,8 +62,8 @@ public class User {
 
     private User(String firstName, String lastName, String email, String passwordHash,
                  AccountType accountType, UserStatus status) {
-        this.firstName = firstName;
-        this.lastName = lastName;
+        this.firstName = PersonNameNormalizer.normalize(firstName);
+        this.lastName = PersonNameNormalizer.normalize(lastName);
         this.email = email;
         this.passwordHash = passwordHash;
         this.accountType = accountType;
@@ -107,8 +108,8 @@ public class User {
             throw new IllegalStateException("Solo una cuenta interna pendiente puede volver a invitarse.");
         }
 
-        this.firstName = firstName;
-        this.lastName = lastName;
+        this.firstName = PersonNameNormalizer.normalize(firstName);
+        this.lastName = PersonNameNormalizer.normalize(lastName);
     }
 
     public void activateInternal(String passwordHash, Instant activatedAt) {
@@ -121,9 +122,28 @@ public class User {
         this.emailVerifiedAt = activatedAt;
     }
 
+    public void suspendInternal() {
+        if (accountType != AccountType.INTERNAL || status != UserStatus.ACTIVE) {
+            throw new IllegalStateException("Solo una cuenta interna activa puede suspenderse.");
+        }
+        this.status = UserStatus.SUSPENDED;
+    }
+
+    public void reactivateInternal() {
+        if (accountType != AccountType.INTERNAL || status != UserStatus.SUSPENDED) {
+            throw new IllegalStateException("Solo una cuenta interna suspendida puede reactivarse.");
+        }
+        this.status = UserStatus.ACTIVE;
+    }
+
     public void verifyEmail(Instant verifiedAt) {
         this.status = UserStatus.ACTIVE;
         this.emailVerifiedAt = verifiedAt;
+    }
+
+    public void updateProfile(String firstName, String lastName) {
+        this.firstName = PersonNameNormalizer.normalize(firstName);
+        this.lastName = PersonNameNormalizer.normalize(lastName);
     }
 
     public void changePassword(String passwordHash) {

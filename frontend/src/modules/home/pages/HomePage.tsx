@@ -1,48 +1,60 @@
-import { AppShell } from '@/shared/components/layout/AppShell'
+import { ErrorState } from '@/shared/components/feedback/ErrorState'
+import { LoadingState } from '@/shared/components/feedback/LoadingState'
 import { PageContainer } from '@/shared/components/layout/PageContainer'
-import { PageHeader } from '@/shared/components/layout/PageHeader'
-import { Badge } from '@/shared/components/ui/Badge'
-import { Card } from '@/shared/components/ui/Card'
-
-const foundations = [
-  'Arquitectura modular por dominio',
-  'TanStack Query para estado del servidor',
-  'Cliente HTTP único y errores normalizados',
-  'Límites de dependencias entre app, módulos y shared',
-  'Componentes base reutilizables',
-  'TypeScript y ESLint estrictos',
-]
+import { DashboardAttention } from '../components/DashboardAttention'
+import { DashboardHero } from '../components/DashboardHero'
+import { DashboardMetricGrid } from '../components/DashboardMetricGrid'
+import { DashboardPipeline } from '../components/DashboardPipeline'
+import { DashboardRecentActivity } from '../components/DashboardRecentActivity'
+import { useInternalDashboard } from '../hooks/useInternalDashboard'
 
 export function HomePage() {
-  return (
-    <AppShell>
+  const query = useInternalDashboard()
+
+  if (query.isPending) {
+    return (
       <PageContainer>
-        <PageHeader
-          eyebrow="Frontend foundation"
-          title="QualityTrack"
-          description="La base del frontend está preparada para implementar los flujos del producto por módulos, sin concentrar lógica, API y UI en archivos monolíticos."
-        />
-
-        <Card className="p-6">
-          <div className="mb-5 flex items-center gap-3">
-            <h2 className="text-base font-semibold text-slate-950">
-              Fundamentos activos
-            </h2>
-            <Badge tone="success">Base preparada</Badge>
-          </div>
-
-          <ul className="grid gap-3 sm:grid-cols-2">
-            {foundations.map((foundation) => (
-              <li
-                key={foundation}
-                className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700"
-              >
-                {foundation}
-              </li>
-            ))}
-          </ul>
-        </Card>
+        <LoadingState label="Cargando panel operacional…" />
       </PageContainer>
-    </AppShell>
+    )
+  }
+
+  if (query.isError) {
+    return (
+      <PageContainer>
+        <ErrorState
+          error={query.error}
+          title="No pudimos cargar el panel operacional"
+        />
+      </PageContainer>
+    )
+  }
+
+  const dashboard = query.data
+
+  return (
+    <PageContainer>
+      <DashboardHero
+        overview={dashboard.overview}
+        pipeline={dashboard.pipeline}
+        commercial={dashboard.commercial}
+      />
+
+      <div className="mt-5">
+        <DashboardMetricGrid overview={dashboard.overview} />
+      </div>
+
+      <div className="mt-5">
+        <DashboardPipeline
+          pipeline={dashboard.pipeline}
+          commercial={dashboard.commercial}
+        />
+      </div>
+
+      <div className="mt-5 grid gap-5 lg:grid-cols-[0.88fr_1.12fr]">
+        <DashboardAttention items={dashboard.attention} />
+        <DashboardRecentActivity activity={dashboard.recentActivity} />
+      </div>
+    </PageContainer>
   )
 }

@@ -23,12 +23,14 @@ class DeliveryTest {
         Delivery delivery = Delivery.create(
                 readyOrder(actor),
                 5,
+                "Planta principal",
                 "Cliente",
                 "Av. Principal 123",
                 "Tepic",
                 "Nayarit",
                 "63000",
                 "México",
+                null,
                 "PAQUETERIA",
                 actor
         );
@@ -60,12 +62,14 @@ class DeliveryTest {
         Delivery delivery = Delivery.create(
                 readyOrder(actor),
                 5,
+                "Planta principal",
                 "Cliente",
                 "Av. Principal 123",
                 "Tepic",
                 "Nayarit",
                 "63000",
                 "México",
+                null,
                 "PAQUETERIA",
                 actor
         );
@@ -91,12 +95,14 @@ class DeliveryTest {
         Delivery delivery = Delivery.create(
                 readyOrder(actor),
                 5,
+                "Planta principal",
                 "Cliente",
                 "Av. Principal 123",
                 "Tepic",
                 "Nayarit",
                 "63000",
                 "México",
+                null,
                 "PAQUETERIA",
                 actor
         );
@@ -121,12 +127,14 @@ class DeliveryTest {
         Delivery delivery = Delivery.create(
                 readyOrder(actor),
                 5,
+                "Planta principal",
                 "Cliente",
                 "Av. Principal 123",
                 "Tepic",
                 "Nayarit",
                 "63000",
                 "México",
+                null,
                 "PAQUETERIA",
                 actor
         );

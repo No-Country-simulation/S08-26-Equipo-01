@@ -46,8 +46,11 @@ public class Delivery {
     @Column(nullable = false, length = 20)
     private DeliveryStatus status;
 
-    @Column(name = "destination_recipient_name", nullable = false, length = 160)
-    private String destinationRecipientName;
+    @Column(name = "destination_label", length = 120)
+    private String destinationLabel;
+
+    @Column(name = "destination_recipient_name", length = 160)
+    private String destinationContactName;
 
     @Column(name = "destination_address", nullable = false, length = 300)
     private String destinationAddress;
@@ -63,6 +66,9 @@ public class Delivery {
 
     @Column(name = "destination_country", nullable = false, length = 100)
     private String destinationCountry;
+
+    @Column(name = "destination_instructions", length = 1000)
+    private String destinationInstructions;
 
     @Column(name = "delivery_method", nullable = false, length = 80)
     private String deliveryMethod;
@@ -119,12 +125,14 @@ public class Delivery {
     private Delivery(
             WorkOrder workOrder,
             Integer quantity,
-            String destinationRecipientName,
+            String destinationLabel,
+            String destinationContactName,
             String destinationAddress,
             String destinationCity,
             String destinationState,
             String destinationPostalCode,
             String destinationCountry,
+            String destinationInstructions,
             String deliveryMethod,
             User createdByUser
     ) {
@@ -136,12 +144,14 @@ public class Delivery {
             throw new IllegalArgumentException("La cantidad de la entrega debe ser mayor a cero.");
         }
         this.quantity = quantity;
-        this.destinationRecipientName = requireText(destinationRecipientName, "El destinatario es obligatorio.");
+        this.destinationLabel = normalizeOptional(destinationLabel);
+        this.destinationContactName = normalizeOptional(destinationContactName);
         this.destinationAddress = requireText(destinationAddress, "La dirección de destino es obligatoria.");
         this.destinationCity = requireText(destinationCity, "La ciudad de destino es obligatoria.");
         this.destinationState = requireText(destinationState, "El estado de destino es obligatorio.");
         this.destinationPostalCode = requireText(destinationPostalCode, "El código postal de destino es obligatorio.");
         this.destinationCountry = requireText(destinationCountry, "El país de destino es obligatorio.");
+        this.destinationInstructions = normalizeOptional(destinationInstructions);
         this.deliveryMethod = requireText(deliveryMethod, "El método de entrega es obligatorio.");
         this.createdByUser = Objects.requireNonNull(createdByUser);
         this.status = DeliveryStatus.PENDING;
@@ -150,24 +160,28 @@ public class Delivery {
     public static Delivery create(
             WorkOrder workOrder,
             Integer quantity,
-            String destinationRecipientName,
+            String destinationLabel,
+            String destinationContactName,
             String destinationAddress,
             String destinationCity,
             String destinationState,
             String destinationPostalCode,
             String destinationCountry,
+            String destinationInstructions,
             String deliveryMethod,
             User createdByUser
     ) {
         return new Delivery(
                 workOrder,
                 quantity,
-                destinationRecipientName,
+                destinationLabel,
+                destinationContactName,
                 destinationAddress,
                 destinationCity,
                 destinationState,
                 destinationPostalCode,
                 destinationCountry,
+                destinationInstructions,
                 deliveryMethod,
                 createdByUser
         );

@@ -71,6 +71,8 @@ public class TraceabilityActionResolver {
                 TraceabilityResourceType.QUALITY_INSPECTION);
         addMetadataAction(actions, event, metadata, "measurementId", "Ver medición",
                 TraceabilityResourceType.QUALITY_MEASUREMENT);
+        addMetadataAction(actions, event, metadata, "qualityCheckId", "Ver control",
+                TraceabilityResourceType.QUALITY_CHECK);
         addMetadataAction(actions, event, metadata, "nonConformityId", "Ver no conformidad",
                 TraceabilityResourceType.NON_CONFORMITY);
         addMetadataAction(actions, event, metadata, "reworkNonConformityId", "Ver NC de retrabajo",
@@ -113,6 +115,8 @@ public class TraceabilityActionResolver {
                     TraceabilityResourceType.QUALITY_INSPECTION, aggregateId);
             case QUALITY_MEASUREMENT -> add(actions, "Ver medición",
                     TraceabilityResourceType.QUALITY_MEASUREMENT, aggregateId);
+            case QUALITY_CHECK -> add(actions, "Ver control",
+                    TraceabilityResourceType.QUALITY_CHECK, aggregateId);
             case NON_CONFORMITY -> add(actions, "Ver no conformidad",
                     TraceabilityResourceType.NON_CONFORMITY, aggregateId);
             case DELIVERY -> add(actions, "Ver entrega",
@@ -187,6 +191,7 @@ public class TraceabilityActionResolver {
             case MATERIAL_LOT -> TraceabilityActionType.VIEW_MATERIAL_LOT;
             case QUALITY_INSPECTION -> TraceabilityActionType.VIEW_QUALITY_INSPECTION;
             case QUALITY_MEASUREMENT -> TraceabilityActionType.VIEW_QUALITY_MEASUREMENT;
+            case QUALITY_CHECK -> TraceabilityActionType.VIEW_QUALITY_CHECK;
             case NON_CONFORMITY -> TraceabilityActionType.VIEW_NON_CONFORMITY;
             case DELIVERY -> TraceabilityActionType.VIEW_DELIVERY;
         };

@@ -5,6 +5,7 @@ import com.nocountry.qualitytrack.customers.entity.CustomerMembership;
 import com.nocountry.qualitytrack.customers.enums.CustomerMembershipRole;
 import com.nocountry.qualitytrack.customers.enums.CustomerMembershipStatus;
 import com.nocountry.qualitytrack.customers.enums.CustomerStatus;
+import com.nocountry.qualitytrack.customers.repository.CustomerAddressRepository;
 import com.nocountry.qualitytrack.customers.repository.CustomerMembershipRepository;
 import com.nocountry.qualitytrack.requests.dto.request.CancelCustomerRequest;
 import com.nocountry.qualitytrack.requests.dto.request.SubmitCustomerRequest;
@@ -13,9 +14,11 @@ import com.nocountry.qualitytrack.requests.entity.CustomerRequest;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.requests.enums.JobCaseStatus;
 import com.nocountry.qualitytrack.requests.enums.MaterialRequirementType;
+import com.nocountry.qualitytrack.requests.enums.RequestDeliveryMode;
 import com.nocountry.qualitytrack.requests.repository.CaseInformationRequestRepository;
 import com.nocountry.qualitytrack.requests.repository.CustomerRequestRepository;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
+import com.nocountry.qualitytrack.requests.repository.RequestDeliveryDestinationRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
 import com.nocountry.qualitytrack.traceability.enums.TraceabilityAggregateType;
@@ -59,6 +62,12 @@ class CustomerRequestServiceTest {
     private CustomerMembershipRepository membershipRepository;
 
     @Mock
+    private CustomerAddressRepository customerAddressRepository;
+
+    @Mock
+    private RequestDeliveryDestinationRepository deliveryDestinationRepository;
+
+    @Mock
     private RequestReferenceGenerator referenceGenerator;
 
     @Mock
@@ -85,6 +94,8 @@ class CustomerRequestServiceTest {
                 jobCaseRepository,
                 informationRequestRepository,
                 membershipRepository,
+                customerAddressRepository,
+                deliveryDestinationRepository,
                 referenceGenerator,
                 customerRequestDocumentService,
                 traceabilityService
@@ -100,7 +111,18 @@ class CustomerRequestServiceTest {
                 25,
                 MaterialRequirementType.SPECIFIED,
                 " AISI 4140 ",
-                LocalDate.now().plusDays(30)
+                LocalDate.now().plusDays(30),
+                RequestDeliveryMode.DEFINE_LATER,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
         );
 
         when(membershipRepository.findByCustomer_IdAndUser_IdAndStatus(
@@ -144,7 +166,9 @@ class CustomerRequestServiceTest {
                 eq(Map.of(
                         "requestNumber", "REQ-00000001",
                         "customerId", 20L,
-                        "title", "Eje de transmisión"
+                        "title", "Eje de transmisión",
+                        "deliveryMode", RequestDeliveryMode.DEFINE_LATER,
+                        "deliveryDestinationLabel", "Destino por definir"
                 ))
         );
         verify(traceabilityService).record(
@@ -364,7 +388,18 @@ class CustomerRequestServiceTest {
                 25,
                 MaterialRequirementType.SPECIFIED,
                 "AISI 4140",
-                LocalDate.now().plusDays(30)
+                LocalDate.now().plusDays(30),
+                RequestDeliveryMode.DEFINE_LATER,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null
         );
     }
 }

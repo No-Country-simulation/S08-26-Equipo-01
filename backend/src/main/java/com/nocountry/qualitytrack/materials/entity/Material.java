@@ -1,10 +1,14 @@
 package com.nocountry.qualitytrack.materials.entity;
 
+import com.nocountry.qualitytrack.documents.entity.DocumentVersion;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -13,6 +17,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.Instant;
+import java.util.Objects;
 
 @Entity
 @Table(name = "materials")
@@ -36,6 +41,10 @@ public class Material {
     @Column(nullable = false, length = 20)
     private String unit;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "technical_sheet_document_version_id")
+    private DocumentVersion technicalSheetDocumentVersion;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -53,6 +62,17 @@ public class Material {
 
     public static Material create(String code, String name, String specification, String unit) {
         return new Material(code, name, specification, unit);
+    }
+
+    public void attachTechnicalSheet(DocumentVersion technicalSheetDocumentVersion) {
+        DocumentVersion version = Objects.requireNonNull(technicalSheetDocumentVersion);
+        if (version.getDocument().getMaterial() == null
+                || !Objects.equals(version.getDocument().getMaterial().getId(), id)) {
+            throw new IllegalArgumentException(
+                    "La ficha técnica debe pertenecer al mismo material."
+            );
+        }
+        this.technicalSheetDocumentVersion = version;
     }
 
     private static String requireText(String value, String message) {

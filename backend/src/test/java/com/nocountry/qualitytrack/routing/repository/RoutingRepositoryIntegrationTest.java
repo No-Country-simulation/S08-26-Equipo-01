@@ -82,14 +82,17 @@ class RoutingRepositoryIntegrationTest {
     }
 
     @Test
-    void databaseRejectsDuplicateOperationSequence() {
+    void databaseRejectsDuplicateOperationSequenceWhenDeferredConstraintIsChecked() {
         Fixture fixture = createFixture("sequence");
         Long routingId = insertRouting(fixture, 1, "PRODUCTION", "DRAFT");
         insertOperation(routingId, 10, "CUT", 30);
+        insertOperation(routingId, 10, "TURN", 45);
 
         assertThrows(
                 DataIntegrityViolationException.class,
-                () -> insertOperation(routingId, 10, "TURN", 45)
+                () -> jdbcTemplate.execute(
+                        "SET CONSTRAINTS uq_routing_operations_sheet_sequence IMMEDIATE"
+                )
         );
     }
 

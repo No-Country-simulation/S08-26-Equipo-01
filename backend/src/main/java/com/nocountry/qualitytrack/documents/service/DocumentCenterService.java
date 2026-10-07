@@ -123,14 +123,21 @@ public class DocumentCenterService {
             List<Long> workOrderIds = workOrderReferences.stream()
                     .map(reference -> reference.getWorkOrder().getId())
                     .toList();
+            List<String> workOrderNumbers = workOrderReferences.stream()
+                    .map(reference -> reference.getWorkOrder().getWorkOrderNumber())
+                    .toList();
             List<Long> materialLotIds = materialReferences.stream()
                     .map(MaterialLot::getId)
+                    .toList();
+            List<String> materialLotNumbers = materialReferences.stream()
+                    .map(MaterialLot::getLotNumber)
                     .toList();
             List<Long> deliveryIds = deliveryReferences.stream()
                     .map(Delivery::getId)
                     .toList();
 
             LinkedHashSet<DocumentContext> contexts = contexts(
+                    document.getJobCase() != null,
                     workOrderIds,
                     materialLotIds,
                     deliveryIds
@@ -153,7 +160,9 @@ public class DocumentCenterService {
                     latestVersion,
                     contexts,
                     workOrderIds,
+                    workOrderNumbers,
                     materialLotIds,
+                    materialLotNumbers,
                     deliveryIds,
                     references(
                             workOrderReferences,
@@ -167,12 +176,15 @@ public class DocumentCenterService {
     }
 
     private LinkedHashSet<DocumentContext> contexts(
+            boolean hasCase,
             List<Long> workOrderIds,
             List<Long> materialLotIds,
             List<Long> deliveryIds
     ) {
         LinkedHashSet<DocumentContext> contexts = new LinkedHashSet<>();
-        contexts.add(DocumentContext.CASE);
+        if (hasCase) {
+            contexts.add(DocumentContext.CASE);
+        }
 
         if (!workOrderIds.isEmpty()) {
             contexts.add(DocumentContext.WORK_ORDER);

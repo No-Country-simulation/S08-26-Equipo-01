@@ -3,16 +3,17 @@ package com.nocountry.qualitytrack.quality.service;
 import com.nocountry.qualitytrack.nonconformities.entity.NonConformity;
 import com.nocountry.qualitytrack.nonconformities.repository.NonConformityRepository;
 import com.nocountry.qualitytrack.nonconformities.service.NonConformityReferenceGenerator;
-import com.nocountry.qualitytrack.quality.dto.request.SaveQualityMeasurementRequest;
+import com.nocountry.qualitytrack.quality.dto.request.SaveQualityCheckRequest;
 import com.nocountry.qualitytrack.quality.dto.request.StartQualityInspectionRequest;
 import com.nocountry.qualitytrack.quality.dto.response.QualityInspectionResponse;
-import com.nocountry.qualitytrack.quality.dto.response.QualityMeasurementResponse;
+import com.nocountry.qualitytrack.quality.dto.response.QualityCheckResponse;
 import com.nocountry.qualitytrack.quality.entity.QualityInspection;
-import com.nocountry.qualitytrack.quality.entity.QualityMeasurement;
+import com.nocountry.qualitytrack.quality.entity.QualityCheck;
 import com.nocountry.qualitytrack.quality.enums.QualityInspectionStatus;
-import com.nocountry.qualitytrack.quality.enums.QualityMeasurementResult;
+import com.nocountry.qualitytrack.quality.enums.QualityCheckResult;
+import com.nocountry.qualitytrack.quality.enums.QualityCheckType;
 import com.nocountry.qualitytrack.quality.repository.QualityInspectionRepository;
-import com.nocountry.qualitytrack.quality.repository.QualityMeasurementRepository;
+import com.nocountry.qualitytrack.quality.repository.QualityCheckRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
 import com.nocountry.qualitytrack.traceability.enums.TraceabilityAggregateType;
@@ -39,7 +40,7 @@ public class QualityWorkflowService {
     private final WorkOrderAccessPolicy accessPolicy;
     private final WorkOrderRepository workOrderRepository;
     private final QualityInspectionRepository inspectionRepository;
-    private final QualityMeasurementRepository measurementRepository;
+    private final QualityCheckRepository checkRepository;
     private final NonConformityRepository nonConformityRepository;
     private final NonConformityReferenceGenerator nonConformityReferenceGenerator;
     private final TraceabilityService traceabilityService;
@@ -142,10 +143,10 @@ public class QualityWorkflowService {
     }
 
     @Transactional
-    public QualityMeasurementResponse addMeasurement(
+    public QualityCheckResponse addCheck(
             Long currentUserId,
             Long inspectionId,
-            SaveQualityMeasurementRequest request
+            SaveQualityCheckRequest request
     ) {
         accessPolicy.requireQualityActor(currentUserId);
         LockedInspection locked = lockWorkOrderThenInspection(inspectionId);
@@ -154,53 +155,44 @@ public class QualityWorkflowService {
         requireAssignedActor(currentUserId, inspection);
         requireOpenInspection(workOrder, inspection);
 
-        QualityMeasurement measurement;
+        QualityCheck qualityCheck;
         try {
-            measurement = QualityMeasurement.create(
-                    inspection,
-                    request.characteristic(),
-                    request.nominalValue(),
-                    request.lowerLimit(),
-                    request.upperLimit(),
-                    request.measuredValue(),
-                    request.unit(),
-                    request.notes()
-            );
+            qualityCheck = createCheck(inspection, request);
         } catch (IllegalArgumentException | IllegalStateException exception) {
             conflict(exception.getMessage());
             throw exception;
         }
 
-        measurement = measurementRepository.saveAndFlush(measurement);
+        qualityCheck = checkRepository.saveAndFlush(qualityCheck);
 
-        traceMeasurement(
+        traceCheck(
                 workOrder,
                 inspection,
-                measurement,
-                TraceabilityEventType.QUALITY_MEASUREMENT_RECORDED,
+                qualityCheck,
+                TraceabilityEventType.QUALITY_CHECK_RECORDED,
                 currentUserId,
                 null,
                 null
         );
 
-        return QualityMeasurementResponse.from(measurement);
+        return QualityCheckResponse.from(qualityCheck);
     }
 
     @Transactional
-    public QualityMeasurementResponse updateMeasurement(
+    public QualityCheckResponse updateCheck(
             Long currentUserId,
             Long inspectionId,
-            Long measurementId,
-            SaveQualityMeasurementRequest request
+            Long checkId,
+            SaveQualityCheckRequest request
     ) {
         accessPolicy.requireQualityActor(currentUserId);
 
-        Long measurementInspectionId = measurementRepository
-                .findInspectionIdById(measurementId)
-                .orElseThrow(() -> notFound("No se encontró la medición."));
+        Long checkInspectionId = checkRepository
+                .findInspectionIdById(checkId)
+                .orElseThrow(() -> notFound("No se encontró el control de calidad."));
 
-        if (!inspectionId.equals(measurementInspectionId)) {
-            conflict("La medición no pertenece a la inspección indicada.");
+        if (!inspectionId.equals(checkInspectionId)) {
+            conflict("El control no pertenece a la inspección indicada.");
         }
 
         LockedInspection locked = lockWorkOrderThenInspection(inspectionId);
@@ -209,48 +201,41 @@ public class QualityWorkflowService {
         requireAssignedActor(currentUserId, inspection);
         requireOpenInspection(workOrder, inspection);
 
-        QualityMeasurement measurement = measurementRepository
-                .findByIdForUpdate(measurementId)
-                .orElseThrow(() -> notFound("No se encontró la medición."));
+        QualityCheck qualityCheck = checkRepository
+                .findByIdForUpdate(checkId)
+                .orElseThrow(() -> notFound("No se encontró el control de calidad."));
 
-        QualityMeasurementResult previousResult = measurement.getResult();
-        Map<String, Object> previousMeasurement = metadata(
-                "characteristic", measurement.getCharacteristic(),
-                "nominalValue", measurement.getNominalValue(),
-                "lowerLimit", measurement.getLowerLimit(),
-                "upperLimit", measurement.getUpperLimit(),
-                "measuredValue", measurement.getMeasuredValue(),
-                "unit", measurement.getUnit(),
-                "notes", measurement.getNotes()
+        QualityCheckResult previousResult = qualityCheck.getResult();
+        Map<String, Object> previousCheck = metadata(
+                "type", qualityCheck.getType(),
+                "name", qualityCheck.getName(),
+                "nominalValue", qualityCheck.getNominalValue(),
+                "lowerLimit", qualityCheck.getLowerLimit(),
+                "upperLimit", qualityCheck.getUpperLimit(),
+                "measuredValue", qualityCheck.getMeasuredValue(),
+                "unit", qualityCheck.getUnit(),
+                "notes", qualityCheck.getNotes()
         );
 
         try {
-            measurement.update(
-                    request.characteristic(),
-                    request.nominalValue(),
-                    request.lowerLimit(),
-                    request.upperLimit(),
-                    request.measuredValue(),
-                    request.unit(),
-                    request.notes()
-            );
+            updateCheck(qualityCheck, request);
         } catch (IllegalArgumentException | IllegalStateException exception) {
             conflict(exception.getMessage());
         }
 
-        measurement = measurementRepository.saveAndFlush(measurement);
+        qualityCheck = checkRepository.saveAndFlush(qualityCheck);
 
-        traceMeasurement(
+        traceCheck(
                 workOrder,
                 inspection,
-                measurement,
-                TraceabilityEventType.QUALITY_MEASUREMENT_UPDATED,
+                qualityCheck,
+                TraceabilityEventType.QUALITY_CHECK_UPDATED,
                 currentUserId,
                 previousResult,
-                previousMeasurement
+                previousCheck
         );
 
-        return QualityMeasurementResponse.from(measurement);
+        return QualityCheckResponse.from(qualityCheck);
     }
 
     @Transactional
@@ -262,15 +247,15 @@ public class QualityWorkflowService {
         User actor = requireAssignedActor(currentUserId, inspection);
         requireOpenInspection(workOrder, inspection);
 
-        List<QualityMeasurement> measurements = measurementRepository
+        List<QualityCheck> checks = checkRepository
                 .findAllByQualityInspection_IdOrderByIdAsc(inspectionId);
 
-        if (measurements.isEmpty()) {
-            conflict("La inspección necesita al menos una medición antes de finalizarse.");
+        if (checks.isEmpty()) {
+            conflict("La inspección necesita al menos un control antes de finalizarse.");
         }
 
-        long failedMeasurements = measurements.stream()
-                .filter(measurement -> measurement.getResult() == QualityMeasurementResult.FAIL)
+        long failedChecks = checks.stream()
+                .filter(qualityCheck -> qualityCheck.getResult() == QualityCheckResult.FAIL)
                 .count();
 
         QualityInspectionStatus previousStatus = inspection.getStatus();
@@ -288,14 +273,14 @@ public class QualityWorkflowService {
 
         NonConformity resultNonConformity = reworkNonConformity;
 
-        if (failedMeasurements > 0
+        if (failedChecks > 0
                 && reworkNonConformity == null
                 && nonConformityRepository.existsByQualityInspection_Id(inspectionId)) {
             conflict("La inspección ya tiene una no conformidad asociada.");
         }
 
         try {
-            if (failedMeasurements == 0) {
+            if (failedChecks == 0) {
                 inspection.approve(completedAt);
                 workOrder.approveQuality();
 
@@ -349,8 +334,8 @@ public class QualityWorkflowService {
                 metadata(
                         "workOrderId", workOrder.getId(),
                         "workOrderStatus", workOrder.getStatus().name(),
-                        "measurementCount", measurements.size(),
-                        "failedMeasurements", failedMeasurements,
+                        "checkCount", checks.size(),
+                        "failedChecks", failedChecks,
                         "reworkNonConformityId",
                         reworkNonConformity == null
                                 ? null
@@ -440,7 +425,7 @@ public class QualityWorkflowService {
                         currentUserId,
                         metadata(
                                 "qualityInspectionId", inspection.getId(),
-                                "failedMeasurements", failedMeasurements
+                                "failedChecks", failedChecks
                         )
                 );
             }
@@ -448,7 +433,7 @@ public class QualityWorkflowService {
 
         return QualityInspectionResponse.from(
                 inspection,
-                measurements,
+                checks,
                 resultNonConformity
         );
     }
@@ -523,7 +508,7 @@ public class QualityWorkflowService {
     }
 
     private QualityInspectionResponse toResponse(QualityInspection inspection) {
-        List<QualityMeasurement> measurements = measurementRepository
+        List<QualityCheck> checks = checkRepository
                 .findAllByQualityInspection_IdOrderByIdAsc(inspection.getId());
 
         NonConformity nonConformity = inspection.getReworkNonConformity();
@@ -536,38 +521,130 @@ public class QualityWorkflowService {
 
         return QualityInspectionResponse.from(
                 inspection,
-                measurements,
+                checks,
                 nonConformity
         );
     }
 
-    private void traceMeasurement(
+    private QualityCheck createCheck(
+            QualityInspection inspection,
+            SaveQualityCheckRequest request
+    ) {
+        validateCheckRequest(request);
+
+        if (request.type() == QualityCheckType.NUMERIC_RANGE) {
+            return QualityCheck.createNumericRange(
+                    inspection,
+                    request.name(),
+                    request.nominalValue(),
+                    request.lowerLimit(),
+                    request.upperLimit(),
+                    request.measuredValue(),
+                    request.unit(),
+                    request.notes()
+            );
+        }
+
+        return QualityCheck.createPassFail(
+                inspection,
+                request.name(),
+                request.result(),
+                request.notes()
+        );
+    }
+
+    private void updateCheck(
+            QualityCheck qualityCheck,
+            SaveQualityCheckRequest request
+    ) {
+        validateCheckRequest(request);
+
+        if (request.type() == QualityCheckType.NUMERIC_RANGE) {
+            qualityCheck.updateNumericRange(
+                    request.name(),
+                    request.nominalValue(),
+                    request.lowerLimit(),
+                    request.upperLimit(),
+                    request.measuredValue(),
+                    request.unit(),
+                    request.notes()
+            );
+            return;
+        }
+
+        qualityCheck.updatePassFail(
+                request.name(),
+                request.result(),
+                request.notes()
+        );
+    }
+
+    private void validateCheckRequest(SaveQualityCheckRequest request) {
+        if (request.type() == QualityCheckType.NUMERIC_RANGE) {
+            if (request.nominalValue() == null
+                    || request.lowerLimit() == null
+                    || request.upperLimit() == null
+                    || request.measuredValue() == null
+                    || request.unit() == null
+                    || request.unit().isBlank()) {
+                throw new IllegalArgumentException(
+                        "Un control NUMERIC_RANGE requiere nominal, límites, valor medido y unidad."
+                );
+            }
+            if (request.result() != null) {
+                throw new IllegalArgumentException(
+                        "El resultado de un control NUMERIC_RANGE se calcula en backend."
+                );
+            }
+            return;
+        }
+
+        if (request.result() == null) {
+            throw new IllegalArgumentException(
+                    "Un control PASS_FAIL requiere un resultado PASS o FAIL."
+            );
+        }
+
+        if (request.nominalValue() != null
+                || request.lowerLimit() != null
+                || request.upperLimit() != null
+                || request.measuredValue() != null
+                || (request.unit() != null && !request.unit().isBlank())) {
+            throw new IllegalArgumentException(
+                    "Un control PASS_FAIL no acepta valores numéricos ni unidad."
+            );
+        }
+    }
+
+    private void traceCheck(
             WorkOrder workOrder,
             QualityInspection inspection,
-            QualityMeasurement measurement,
+            QualityCheck qualityCheck,
             TraceabilityEventType eventType,
             Long currentUserId,
-            QualityMeasurementResult previousResult,
-            Map<String, Object> previousMeasurement
+            QualityCheckResult previousResult,
+            Map<String, Object> previousCheck
     ) {
         traceabilityService.record(
                 workOrder.getJobCase(),
-                TraceabilityAggregateType.QUALITY_MEASUREMENT,
-                measurement.getId(),
+                TraceabilityAggregateType.QUALITY_CHECK,
+                qualityCheck.getId(),
                 eventType,
                 previousResult == null ? null : previousResult.name(),
-                measurement.getResult().name(),
+                qualityCheck.getResult().name(),
                 currentUserId,
                 metadata(
                         "qualityInspectionId", inspection.getId(),
-                        "characteristic", measurement.getCharacteristic(),
-                        "nominalValue", measurement.getNominalValue(),
-                        "measuredValue", measurement.getMeasuredValue(),
-                        "lowerLimit", measurement.getLowerLimit(),
-                        "upperLimit", measurement.getUpperLimit(),
-                        "unit", measurement.getUnit(),
-                        "notes", measurement.getNotes(),
-                        "previous", previousMeasurement,
+                        "qualityCheckId", qualityCheck.getId(),
+                        "checkType", qualityCheck.getType(),
+                        "name", qualityCheck.getName(),
+                        "nominalValue", qualityCheck.getNominalValue(),
+                        "measuredValue", qualityCheck.getMeasuredValue(),
+                        "lowerLimit", qualityCheck.getLowerLimit(),
+                        "upperLimit", qualityCheck.getUpperLimit(),
+                        "unit", qualityCheck.getUnit(),
+                        "notes", qualityCheck.getNotes(),
+                        "previous", previousCheck,
                         "inspectorId", inspection.getInspector().getId()
                 )
         );

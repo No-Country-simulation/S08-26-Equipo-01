@@ -12,6 +12,8 @@ public interface UserSystemRoleRepository extends JpaRepository<UserSystemRole, 
 
     List<UserSystemRole> findAllByIdUserId(Long userId);
 
+    List<UserSystemRole> findAllByUser_AccountType(AccountType accountType);
+
     boolean existsByIdUserIdAndIdRole(Long userId, SystemRole role);
 
     boolean existsById_RoleAndUser_AccountType(SystemRole role, AccountType accountType);

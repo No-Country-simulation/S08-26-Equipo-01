@@ -5,6 +5,8 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
+import java.util.List;
+
 public record UpdateRoutingOperationRequest(
         @NotNull(message = "La secuencia es obligatoria.")
         @Positive(message = "La secuencia debe ser mayor a cero.")
@@ -22,6 +24,28 @@ public record UpdateRoutingOperationRequest(
 
         @NotNull(message = "El tiempo estimado es obligatorio.")
         @Positive(message = "El tiempo estimado debe ser mayor a cero.")
-        Integer estimatedMinutes
+        Integer estimatedMinutes,
+
+        List<Long> prerequisiteOperationIds,
+
+        Boolean resequenceOperations
 ) {
+    public UpdateRoutingOperationRequest(
+            Integer sequenceNumber,
+            String code,
+            String name,
+            String instructions,
+            Integer estimatedMinutes,
+            List<Long> prerequisiteOperationIds
+    ) {
+        this(
+                sequenceNumber,
+                code,
+                name,
+                instructions,
+                estimatedMinutes,
+                prerequisiteOperationIds,
+                false
+        );
+    }
 }

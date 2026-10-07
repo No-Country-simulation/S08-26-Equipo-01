@@ -80,6 +80,7 @@ class CustomerRequestControllerMultipartTest {
                         .param("materialRequirementType", "SPECIFIED")
                         .param("materialRequirement", "AISI 304")
                         .param("requestedDeliveryDate", LocalDate.now().plusDays(10).toString())
+                        .param("deliveryMode", "DEFINE_LATER")
                         .param("documents[0].documentType", "TECHNICAL_DRAWING")
                         .param("documents[0].name", "Plano técnico")
                         .param("documents[1].documentType", "REFERENCE_IMAGE")

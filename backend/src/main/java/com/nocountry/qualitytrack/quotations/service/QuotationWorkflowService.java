@@ -247,8 +247,15 @@ public class QuotationWorkflowService {
             conflict("La cotización ya venció y no puede aprobarse.");
         }
 
+        JobCase jobCase = quotation.getJobCase();
+        if (jobCase.getStatus() != JobCaseStatus.READY_FOR_QUOTATION) {
+            conflict("El expediente no está listo para recibir la aprobación comercial.");
+        }
+
         QuotationStatus previousStatus = quotation.getStatus();
+        JobCaseStatus previousCaseStatus = jobCase.getStatus();
         quotation.approve(Instant.now());
+        jobCase.markAwaitingWorkOrder();
         quotation = quotationRepository.saveAndFlush(quotation);
 
         recordStatusEvent(
@@ -264,7 +271,26 @@ public class QuotationWorkflowService {
                 )
         );
 
-        return CustomerQuotationDetailResponse.from(quotation);
+        traceabilityService.record(
+                jobCase,
+                TraceabilityAggregateType.JOB_CASE,
+                jobCase.getId(),
+                TraceabilityEventType.JOB_CASE_STATUS_CHANGED,
+                previousCaseStatus.name(),
+                jobCase.getStatus().name(),
+                membership.getUser().getId(),
+                metadata(
+                        "caseNumber", jobCase.getCaseNumber(),
+                        "quotationId", quotation.getId(),
+                        "quotationNumber", quotation.getQuotationNumber(),
+                        "quotationRevision", quotation.getRevision()
+                )
+        );
+
+        return CustomerQuotationDetailResponse.from(
+                quotation,
+                quotationSourceService.getForCustomer(quotation)
+        );
     }
 
     @Transactional
@@ -327,7 +353,8 @@ public class QuotationWorkflowService {
                 current,
                 CustomerQuotationStatus.ADJUSTMENT_REQUESTED,
                 input.notes(),
-                null
+                null,
+                quotationSourceService.getForCustomer(current)
         );
     }
 
@@ -364,7 +391,10 @@ public class QuotationWorkflowService {
                 )
         );
 
-        return CustomerQuotationDetailResponse.from(quotation);
+        return CustomerQuotationDetailResponse.from(
+                quotation,
+                quotationSourceService.getForCustomer(quotation)
+        );
     }
 
     @Transactional

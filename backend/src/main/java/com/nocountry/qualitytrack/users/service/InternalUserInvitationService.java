@@ -44,6 +44,7 @@ public class InternalUserInvitationService {
     private final OpaqueTokenService opaqueTokenService;
     private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
+    private final DemoAccountPolicy demoAccountPolicy;
     private final Duration invitationExpiration;
 
     public InternalUserInvitationService(
@@ -53,6 +54,7 @@ public class InternalUserInvitationService {
             OpaqueTokenService opaqueTokenService,
             EmailService emailService,
             PasswordEncoder passwordEncoder,
+            DemoAccountPolicy demoAccountPolicy,
             @Value("${app.internal-invitations.expiration:PT72H}") Duration invitationExpiration
     ) {
         if (invitationExpiration == null || invitationExpiration.isZero() || invitationExpiration.isNegative()) {
@@ -65,6 +67,7 @@ public class InternalUserInvitationService {
         this.opaqueTokenService = opaqueTokenService;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;
+        this.demoAccountPolicy = demoAccountPolicy;
         this.invitationExpiration = invitationExpiration;
     }
 
@@ -173,6 +176,8 @@ public class InternalUserInvitationService {
     }
 
     private User requireInternalAdmin(Long currentUserId) {
+        demoAccountPolicy.requireIdentityMutationAllowed(currentUserId);
+
         User user = userRepository.findById(currentUserId)
                 .orElseThrow(this::accessDenied);
 

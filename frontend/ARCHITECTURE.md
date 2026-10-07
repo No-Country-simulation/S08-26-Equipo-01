@@ -30,6 +30,7 @@ shared
 - `shared` cannot import `modules` or `app`.
 - `modules` cannot import `app`.
 - Modules may consume another module only through that module's public `index.ts`.
+- Files inside one module import one another with relative paths. The `@/modules/...` alias is used at module boundaries, not for internal imports.
 - `app` composes modules and application infrastructure.
 
 ## Source structure
@@ -37,6 +38,7 @@ shared
 ```text
 src/
 ├── app/
+│   ├── layout/
 │   ├── providers/
 │   ├── query/
 │   └── router/
@@ -48,6 +50,7 @@ src/
 │       ├── model/
 │       ├── pages/
 │       ├── schemas/
+│       ├── store/
 │       ├── types/
 │       └── index.ts
 └── shared/
@@ -95,6 +98,14 @@ Use TanStack Query for data whose source of truth is the backend: requests, job 
 ### Client state
 
 Use local React state first. Use Zustand only when client-owned state genuinely spans distant parts of the application, such as authenticated session metadata or persistent UI preferences. Do not use Zustand as a second API cache.
+
+### Authentication session
+
+- The auth module owns session metadata in Zustand.
+- The access token is persisted only in `sessionStorage`, so a browser session can survive reloads without becoming a long-lived local credential.
+- The application boundary configures the shared Axios client to attach the bearer token. `shared` never imports the auth module.
+- Expired or unauthorized sessions are cleared and React Query cache is discarded before returning to the login route.
+- The JWT is decoded only to drive client-side identity and permissions. Backend authorization remains the source of truth.
 
 ## API contracts
 

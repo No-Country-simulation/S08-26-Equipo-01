@@ -1,0 +1,203 @@
+/*
+ * Shared visual contract for QualityTrack dialogs.
+ * Individual dialogs keep their domain-specific content and sizing, while
+ * this layer keeps overlays, surfaces, headers and action areas coherent.
+ */
+
+:where(.fixed.inset-0):has(> [role='dialog'][aria-modal='true']) {
+  background: rgb(2 6 23 / 0.5) !important;
+  padding: clamp(0.75rem, 2vw, 1.25rem) !important;
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
+}
+
+:where([role='dialog'][aria-modal='true']) {
+  max-height: min(92dvh, 760px);
+  border: 1px solid rgb(219 234 254 / 0.9) !important;
+  border-radius: 1rem !important;
+  background-color: #fff !important;
+  box-shadow: 0 28px 90px -32px rgb(15 23 42 / 0.55) !important;
+  overscroll-behavior: contain;
+}
+
+:where([role='dialog'][aria-modal='true'])
+  > :where(header, div):first-child:has(h2) {
+  border-bottom-color: rgb(219 234 254 / 0.9) !important;
+  background: linear-gradient(
+    90deg,
+    #fff 0%,
+    #fff 56%,
+    rgb(239 246 255 / 0.82) 100%
+  ) !important;
+}
+
+:where([role='dialog'][aria-modal='true'])
+  > :where(header, div):first-child:has(h2)
+  h2 {
+  font-size: 0.9375rem !important;
+  line-height: 1.25rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em;
+  color: #020617 !important;
+}
+
+:where([role='dialog'][aria-modal='true'])
+  > :where(header, div):first-child:has(h2)
+  p:not(:first-child) {
+  font-size: 0.625rem !important;
+  line-height: 1rem !important;
+  color: #475569 !important;
+}
+
+:where([role='dialog'][aria-modal='true']):has(> h2:first-child) {
+  padding: 1rem 1.25rem 0 !important;
+  background: linear-gradient(
+    135deg,
+    #fff 0%,
+    #fff 76%,
+    rgb(239 246 255 / 0.6) 100%
+  ) !important;
+}
+
+:where([role='dialog'][aria-modal='true']) > h2:first-child {
+  margin: 0 !important;
+  font-size: 0.9375rem !important;
+  line-height: 1.25rem !important;
+  font-weight: 600 !important;
+  letter-spacing: -0.01em;
+  color: #020617 !important;
+}
+
+:where([role='dialog'][aria-modal='true']) > h2:first-child + p {
+  margin-top: 0.25rem !important;
+  font-size: 0.625rem !important;
+  line-height: 1rem !important;
+  color: #475569 !important;
+}
+
+:where([role='dialog'][aria-modal='true'])
+  :where(
+    input[type='text'],
+    input[type='email'],
+    input[type='tel'],
+    input[type='number'],
+    input[type='date'],
+    input[type='password'],
+    select
+  ) {
+  min-height: 2.25rem !important;
+  height: 2.25rem !important;
+  border-radius: 0.5rem !important;
+  font-size: 0.6875rem !important;
+}
+
+:where([role='dialog'][aria-modal='true']) textarea {
+  min-height: 4.25rem !important;
+  border-radius: 0.5rem !important;
+  font-size: 0.6875rem !important;
+  line-height: 1rem !important;
+}
+
+:where([role='dialog'][aria-modal='true']) label {
+  font-size: 0.6875rem;
+}
+
+:where([role='dialog'][aria-modal='true']) > footer:last-child,
+:where([role='dialog'][aria-modal='true'])
+  > div:last-child:has(> button) {
+  border-top-color: #f1f5f9 !important;
+  background: linear-gradient(90deg, #fff 0%, rgb(248 250 252 / 0.94) 100%) !important;
+}
+
+:where([role='dialog'][aria-modal='true']):has(> h2:first-child)
+  > div:last-child:has(> button) {
+  margin: 1rem -1.25rem 0 !important;
+  padding: 0.75rem 1.25rem !important;
+  border-top: 1px solid #f1f5f9 !important;
+}
+
+:where([role='dialog'][aria-modal='true']) > footer:last-child button,
+:where([role='dialog'][aria-modal='true'])
+  > div:last-child:has(> button)
+  > button {
+  min-height: 2rem !important;
+  height: 2rem !important;
+  padding-inline: 0.75rem !important;
+  font-size: 0.625rem !important;
+  line-height: 1 !important;
+}
+
+:where(
+    [role='dialog'][aria-modal='true'][aria-labelledby*='cancel'],
+    [role='dialog'][aria-modal='true'][aria-labelledby*='reject'],
+    [role='dialog'][aria-modal='true'][aria-labelledby*='remove'],
+    [role='dialog'][aria-modal='true'][aria-labelledby*='delete']
+  ) {
+  border-color: rgb(254 226 226 / 0.95) !important;
+}
+
+:where(
+    [role='dialog'][aria-modal='true'][aria-labelledby*='cancel'],
+    [role='dialog'][aria-modal='true'][aria-labelledby*='reject'],
+    [role='dialog'][aria-modal='true'][aria-labelledby*='remove'],
+    [role='dialog'][aria-modal='true'][aria-labelledby*='delete']
+  )
+  > :where(header, div):first-child:has(h2) {
+  border-bottom-color: #fee2e2 !important;
+  background: linear-gradient(
+    90deg,
+    #fff 0%,
+    #fff 58%,
+    rgb(254 242 242 / 0.82) 100%
+  ) !important;
+}
+
+:where(
+    [role='dialog'][aria-modal='true'][aria-labelledby*='cancel'],
+    [role='dialog'][aria-modal='true'][aria-labelledby*='reject'],
+    [role='dialog'][aria-modal='true'][aria-labelledby*='remove'],
+    [role='dialog'][aria-modal='true'][aria-labelledby*='delete']
+  ):has(> h2:first-child) {
+  background: linear-gradient(
+    135deg,
+    #fff 0%,
+    #fff 76%,
+    rgb(254 242 242 / 0.72) 100%
+  ) !important;
+}
+
+@media (max-width: 639px) {
+  :where(.fixed.inset-0):has(> [role='dialog'][aria-modal='true']) {
+    align-items: center;
+    padding: 0.75rem !important;
+  }
+
+  :where([role='dialog'][aria-modal='true']) {
+    max-height: calc(100dvh - 1.5rem);
+    border-radius: 0.875rem !important;
+  }
+
+  :where([role='dialog'][aria-modal='true'])
+    :where(
+      input[type='text'],
+      input[type='email'],
+      input[type='tel'],
+      input[type='number'],
+      input[type='date'],
+      input[type='password'],
+      select
+    ) {
+    min-height: 2.75rem !important;
+    height: 2.75rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  :where([role='dialog'][aria-modal='true']) > footer:last-child button,
+  :where([role='dialog'][aria-modal='true'])
+    > div:last-child:has(> button)
+    > button {
+    min-height: 2.75rem !important;
+    height: 2.75rem !important;
+    font-size: 0.6875rem !important;
+  }
+}

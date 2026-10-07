@@ -24,6 +24,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -57,7 +58,7 @@ public class WorkOrder360Service {
         Long caseId = workOrder.source().caseId();
         Long quotationId = workOrder.agreement().quotationId();
 
-        List<DocumentCenterResponse> documentCenter = documentCenterService.search(
+        List<DocumentCenterResponse> caseDocuments = documentCenterService.search(
                 currentUserId,
                 null,
                 caseId,
@@ -68,10 +69,26 @@ public class WorkOrder360Service {
                 null
         );
 
+        List<DocumentCenterResponse> operationalDocuments = documentCenterService.search(
+                currentUserId,
+                null,
+                null,
+                workOrderId,
+                null,
+                null,
+                null,
+                null
+        );
+
+        LinkedHashMap<Long, DocumentCenterResponse> documentsById = new LinkedHashMap<>();
+        caseDocuments.forEach(document -> documentsById.put(document.id(), document));
+        operationalDocuments.forEach(document -> documentsById.putIfAbsent(document.id(), document));
+
+        List<DocumentCenterResponse> documentCenter = List.copyOf(documentsById.values());
+
         Map<Long, List<DocumentVersionResponse>> versionsByDocumentId =
-                documentService.listVersionsByDocumentIds(
+                documentService.listVersionsByDocumentIdsInternal(
                         currentUserId,
-                        caseId,
                         documentCenter.stream()
                                 .map(DocumentCenterResponse::id)
                                 .toList()
@@ -102,7 +119,7 @@ public class WorkOrder360Service {
                 .toList();
 
         List<Traceability360EventResponse> timeline = traceabilityService
-                .timeline(caseId)
+                .timelineAll(caseId)
                 .stream()
                 .map(event -> Traceability360EventResponse.from(
                         event,

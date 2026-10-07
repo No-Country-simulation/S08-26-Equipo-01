@@ -11,6 +11,7 @@ public enum TraceabilityAggregateType {
     OPERATION_EXECUTION,
     QUALITY_INSPECTION,
     QUALITY_MEASUREMENT,
+    QUALITY_CHECK,
     NON_CONFORMITY,
     DELIVERY
 }

@@ -29,6 +29,10 @@ public interface CustomerInvitationRepository extends JpaRepository<CustomerInvi
     Optional<CustomerInvitation> findByTokenHash(String tokenHash);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select invitation from CustomerInvitation invitation where invitation.id = :invitationId")
+    Optional<CustomerInvitation> findByIdForUpdate(@Param("invitationId") Long invitationId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select invitation from CustomerInvitation invitation where invitation.tokenHash = :tokenHash")
     Optional<CustomerInvitation> findByTokenHashForUpdate(@Param("tokenHash") String tokenHash);
 }

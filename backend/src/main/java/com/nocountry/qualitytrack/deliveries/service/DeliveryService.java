@@ -9,11 +9,16 @@ import com.nocountry.qualitytrack.deliveries.dto.response.DeliveryResponse;
 import com.nocountry.qualitytrack.deliveries.entity.Delivery;
 import com.nocountry.qualitytrack.deliveries.enums.DeliveryStatus;
 import com.nocountry.qualitytrack.deliveries.repository.DeliveryRepository;
+import com.nocountry.qualitytrack.documents.dto.request.CreateDocumentRequest;
+import com.nocountry.qualitytrack.documents.dto.response.DocumentResponse;
 import com.nocountry.qualitytrack.documents.entity.DocumentVersion;
 import com.nocountry.qualitytrack.documents.enums.DocumentStatus;
 import com.nocountry.qualitytrack.documents.repository.DocumentVersionRepository;
 import com.nocountry.qualitytrack.documents.service.DocumentAccessService;
+import com.nocountry.qualitytrack.documents.service.DocumentService;
+import com.nocountry.qualitytrack.documents.service.DocumentVersionMutationResult;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
+import com.nocountry.qualitytrack.requests.enums.JobCaseStatus;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
@@ -27,6 +32,7 @@ import com.nocountry.qualitytrack.workorders.repository.WorkOrderRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.Instant;
 import java.util.LinkedHashMap;
@@ -45,6 +51,7 @@ public class DeliveryService {
     private final JobCaseRepository jobCaseRepository;
     private final DocumentVersionRepository documentVersionRepository;
     private final DocumentAccessService documentAccessService;
+    private final DocumentService documentService;
     private final TraceabilityService traceabilityService;
 
     @Transactional
@@ -57,13 +64,13 @@ public class DeliveryService {
         WorkOrder workOrder = requireWorkOrderForUpdate(workOrderId);
         requireReadyForDelivery(workOrder);
 
-        long reservedQuantity = deliveryRepository.sumReservedQuantityByWorkOrderId(
+        long committedQuantity = deliveryRepository.sumCommittedQuantityByWorkOrderId(
                 workOrderId,
                 DeliveryStatus.CANCELLED
         );
-        long projectedQuantity = reservedQuantity + request.quantity();
+        long projectedQuantity = committedQuantity + request.quantity();
         if (projectedQuantity > workOrder.getPlannedQuantity()) {
-            conflict("La cantidad reservada en entregas activas no puede exceder la cantidad planeada de la OT.");
+            conflict("La cantidad comprometida en entregas no canceladas no puede exceder la cantidad planeada de la OT.");
         }
 
         Delivery delivery;
@@ -71,12 +78,14 @@ public class DeliveryService {
             delivery = Delivery.create(
                     workOrder,
                     request.quantity(),
-                    request.destinationRecipientName(),
+                    request.destinationLabel(),
+                    request.destinationContactName(),
                     request.destinationAddress(),
                     request.destinationCity(),
                     request.destinationState(),
                     request.destinationPostalCode(),
                     request.destinationCountry(),
+                    request.destinationInstructions(),
                     request.deliveryMethod(),
                     actor
             );
@@ -99,9 +108,12 @@ public class DeliveryService {
                         "workOrderId", workOrder.getId(),
                         "workOrderNumber", workOrder.getWorkOrderNumber(),
                         "quantity", delivery.getQuantity(),
-                        "reservedQuantity", projectedQuantity,
+                        "committedQuantity", projectedQuantity,
                         "plannedQuantity", workOrder.getPlannedQuantity(),
-                        "deliveryMethod", delivery.getDeliveryMethod()
+                        "deliveryMethod", delivery.getDeliveryMethod(),
+                        "destinationLabel", delivery.getDestinationLabel(),
+                        "destinationCity", delivery.getDestinationCity(),
+                        "destinationState", delivery.getDestinationState()
                 )
         );
 
@@ -116,6 +128,15 @@ public class DeliveryService {
         }
 
         return deliveryRepository.findAllByWorkOrder_IdOrderByCreatedAtAscIdAsc(workOrderId)
+                .stream()
+                .map(DeliveryResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<DeliveryResponse> listAll(Long currentUserId) {
+        accessPolicy.requireInternalReader(currentUserId);
+        return deliveryRepository.findAllByOrderByCreatedAtDescIdDesc()
                 .stream()
                 .map(DeliveryResponse::from)
                 .toList();
@@ -207,6 +228,113 @@ public class DeliveryService {
                 delivery.getStatus().name(),
                 currentUserId,
                 metadata("documentVersionId", evidence.getId())
+        );
+
+        return DeliveryResponse.from(delivery);
+    }
+
+    @Transactional
+    public DeliveryResponse uploadEvidence(
+            Long currentUserId,
+            Long deliveryId,
+            MultipartFile file
+    ) {
+        accessPolicy.requireLogisticsActor(currentUserId);
+        LockedDelivery locked = lockWorkOrderThenDelivery(deliveryId);
+        WorkOrder workOrder = locked.workOrder();
+        Delivery delivery = locked.delivery();
+        requireReadyForDelivery(workOrder);
+
+        if (delivery.getStatus() != DeliveryStatus.PENDING
+                && delivery.getStatus() != DeliveryStatus.DISPATCHED) {
+            conflict("La evidencia solo puede modificarse antes de confirmar la entrega.");
+        }
+
+        Long caseId = workOrder.getJobCase().getId();
+        DocumentVersion evidence;
+        Long documentId;
+
+        if (delivery.getEvidenceDocumentVersion() == null) {
+            DocumentResponse document = documentService.create(
+                    currentUserId,
+                    new CreateDocumentRequest(
+                            caseId,
+                            DELIVERY_EVIDENCE_TYPE,
+                            "Evidencia entrega #" + delivery.getId(),
+                            "Evidencia de entrega de la OT " + workOrder.getWorkOrderNumber() + "."
+                    ),
+                    file
+            );
+
+            documentId = document.id();
+            evidence = documentVersionRepository.getReferenceById(
+                    document.currentVersion().id()
+            );
+
+            traceabilityService.record(
+                    workOrder.getJobCase(),
+                    TraceabilityAggregateType.DOCUMENT,
+                    documentId,
+                    TraceabilityEventType.DOCUMENT_ADDED,
+                    null,
+                    null,
+                    currentUserId,
+                    metadata(
+                            "deliveryId", delivery.getId(),
+                            "documentType", DELIVERY_EVIDENCE_TYPE,
+                            "fileName", document.currentVersion().fileName()
+                    )
+            );
+        } else {
+            documentId = delivery.getEvidenceDocumentVersion().getDocument().getId();
+            DocumentVersionMutationResult result = documentService.addVersion(
+                    currentUserId,
+                    caseId,
+                    documentId,
+                    file
+            );
+
+            evidence = documentVersionRepository.getReferenceById(
+                    result.version().id()
+            );
+
+            traceabilityService.record(
+                    workOrder.getJobCase(),
+                    TraceabilityAggregateType.DOCUMENT_VERSION,
+                    result.version().id(),
+                    TraceabilityEventType.DOCUMENT_VERSION_ADDED,
+                    null,
+                    null,
+                    currentUserId,
+                    metadata(
+                            "deliveryId", delivery.getId(),
+                            "documentId", documentId,
+                            "version", result.version().version(),
+                            "fileName", result.version().fileName()
+                    )
+            );
+        }
+
+        try {
+            delivery.attachEvidence(evidence);
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            conflict(exception.getMessage());
+        }
+
+        delivery = deliveryRepository.saveAndFlush(delivery);
+
+        traceabilityService.record(
+                workOrder.getJobCase(),
+                TraceabilityAggregateType.DELIVERY,
+                delivery.getId(),
+                TraceabilityEventType.DELIVERY_EVIDENCE_ATTACHED,
+                delivery.getStatus().name(),
+                delivery.getStatus().name(),
+                currentUserId,
+                metadata(
+                        "documentId", documentId,
+                        "documentVersionId", evidence.getId()
+                )
         );
 
         return DeliveryResponse.from(delivery);
@@ -320,6 +448,8 @@ public class DeliveryService {
 
         boolean workOrderCompleted = deliveredQuantity == workOrder.getPlannedQuantity();
         WorkOrderStatus previousWorkOrderStatus = workOrder.getStatus();
+        JobCase completedJobCase = null;
+        JobCaseStatus previousJobCaseStatus = null;
 
         if (workOrderCompleted) {
             try {
@@ -328,6 +458,21 @@ public class DeliveryService {
                 conflict(exception.getMessage());
             }
             workOrderRepository.saveAndFlush(workOrder);
+
+            completedJobCase = workOrder.getJobCase();
+            previousJobCaseStatus = completedJobCase.getStatus();
+            Instant completedAt = deliveryRepository
+                    .findLatestDeliveredAtByWorkOrderId(
+                            workOrder.getId(),
+                            DeliveryStatus.DELIVERED
+                    )
+                    .orElse(delivery.getDeliveredAt());
+            try {
+                completedJobCase.complete(completedAt);
+            } catch (IllegalArgumentException | IllegalStateException exception) {
+                conflict(exception.getMessage());
+            }
+            jobCaseRepository.saveAndFlush(completedJobCase);
         }
 
         traceabilityService.record(
@@ -363,6 +508,25 @@ public class DeliveryService {
                     metadata(
                             "workOrderNumber", workOrder.getWorkOrderNumber(),
                             "deliveredQuantity", deliveredQuantity
+                    )
+            );
+
+            traceabilityService.record(
+                    completedJobCase,
+                    TraceabilityAggregateType.JOB_CASE,
+                    completedJobCase.getId(),
+                    TraceabilityEventType.JOB_CASE_COMPLETED,
+                    previousJobCaseStatus.name(),
+                    JobCaseStatus.COMPLETED.name(),
+                    currentUserId,
+                    metadata(
+                            "caseNumber", completedJobCase.getCaseNumber(),
+                            "workOrderId", workOrder.getId(),
+                            "workOrderNumber", workOrder.getWorkOrderNumber(),
+                            "finalDeliveryId", delivery.getId(),
+                            "finalDeliveredAt", delivery.getDeliveredAt(),
+                            "deliveredQuantity", deliveredQuantity,
+                            "plannedQuantity", workOrder.getPlannedQuantity()
                     )
             );
         }

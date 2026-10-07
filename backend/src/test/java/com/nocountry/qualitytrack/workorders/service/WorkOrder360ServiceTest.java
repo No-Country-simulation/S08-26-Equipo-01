@@ -99,10 +99,19 @@ class WorkOrder360ServiceTest {
                 null,
                 null
         )).thenReturn(List.of(document));
-        when(document.id()).thenReturn(30L);
-        when(documentService.listVersionsByDocumentIds(
+        when(documentCenterService.search(
                 10L,
-                12L,
+                null,
+                null,
+                7L,
+                null,
+                null,
+                null,
+                null
+        )).thenReturn(List.of(document));
+        when(document.id()).thenReturn(30L);
+        when(documentService.listVersionsByDocumentIdsInternal(
+                10L,
                 List.of(30L)
         )).thenReturn(Map.of(30L, List.of(documentVersion)));
 
@@ -128,7 +137,7 @@ class WorkOrder360ServiceTest {
                 31L
         );
 
-        when(traceabilityService.timeline(12L)).thenReturn(List.of(event));
+        when(traceabilityService.timelineAll(12L)).thenReturn(List.of(event));
         when(actionResolver.resolve(event)).thenReturn(List.of(action));
 
         when(quotationService.listRevisionsInternal(10L, 20L)).thenReturn(List.of());
@@ -158,7 +167,7 @@ class WorkOrder360ServiceTest {
         assertEquals(31L, timelineEvent.actions().get(0).resourceId());
 
         verify(accessPolicy).requireInternalReader(10L);
-        verify(documentService).listVersionsByDocumentIds(10L, 12L, List.of(30L));
+        verify(documentService).listVersionsByDocumentIdsInternal(10L, List.of(30L));
         verify(materialService).getLotsByIds(10L, List.of());
         verify(productionService).getStatus(10L, 7L);
     }

@@ -13,6 +13,9 @@ public record DocumentCenterResponse(
         Long caseId,
         Long requestId,
         Long customerId,
+        String customerName,
+        String requestNumber,
+        String caseNumber,
         String documentType,
         String name,
         String description,
@@ -22,7 +25,9 @@ public record DocumentCenterResponse(
         DocumentVersionResponse currentVersion,
         Set<DocumentContext> contexts,
         List<Long> workOrderIds,
+        List<String> workOrderNumbers,
         List<Long> materialLotIds,
+        List<String> materialLotNumbers,
         List<Long> deliveryIds,
         List<DocumentReferenceResponse> references
 ) {
@@ -32,19 +37,24 @@ public record DocumentCenterResponse(
             DocumentVersion currentVersion,
             Set<DocumentContext> contexts,
             List<Long> workOrderIds,
+            List<String> workOrderNumbers,
             List<Long> materialLotIds,
+            List<String> materialLotNumbers,
             List<Long> deliveryIds,
             List<DocumentReferenceResponse> references
     ) {
         var jobCase = document.getJobCase();
-        var request = jobCase.getCustomerRequest();
-        var customer = request.getCustomer();
+        var request = jobCase == null ? null : jobCase.getCustomerRequest();
+        var customer = request == null ? null : request.getCustomer();
 
         return new DocumentCenterResponse(
                 document.getId(),
-                jobCase.getId(),
-                request.getId(),
-                customer.getId(),
+                jobCase == null ? null : jobCase.getId(),
+                request == null ? null : request.getId(),
+                customer == null ? null : customer.getId(),
+                customer == null ? null : customer.getName(),
+                request == null ? null : request.getRequestNumber(),
+                jobCase == null ? null : jobCase.getCaseNumber(),
                 document.getDocumentType(),
                 document.getName(),
                 document.getDescription(),
@@ -57,7 +67,9 @@ public record DocumentCenterResponse(
                 DocumentVersionResponse.from(currentVersion),
                 Set.copyOf(contexts),
                 List.copyOf(workOrderIds),
+                List.copyOf(workOrderNumbers),
                 List.copyOf(materialLotIds),
+                List.copyOf(materialLotNumbers),
                 List.copyOf(deliveryIds),
                 List.copyOf(references)
         );

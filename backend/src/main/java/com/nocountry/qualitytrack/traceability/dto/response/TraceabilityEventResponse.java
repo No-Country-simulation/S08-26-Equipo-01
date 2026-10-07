@@ -8,6 +8,7 @@ import com.nocountry.qualitytrack.users.entity.User;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 public record TraceabilityEventResponse(
@@ -20,8 +21,41 @@ public record TraceabilityEventResponse(
         Long performedByUserId,
         String performedByName,
         Map<String, Object> metadata,
-        Instant occurredAt
+        Instant occurredAt,
+        List<TraceabilityActionResponse> actions
 ) {
+    public TraceabilityEventResponse {
+        metadata = immutableMetadata(metadata);
+        actions = actions == null ? List.of() : List.copyOf(actions);
+    }
+
+    public TraceabilityEventResponse(
+            Long id,
+            TraceabilityAggregateType aggregateType,
+            Long aggregateId,
+            TraceabilityEventType eventType,
+            String fromStatus,
+            String toStatus,
+            Long performedByUserId,
+            String performedByName,
+            Map<String, Object> metadata,
+            Instant occurredAt
+    ) {
+        this(
+                id,
+                aggregateType,
+                aggregateId,
+                eventType,
+                fromStatus,
+                toStatus,
+                performedByUserId,
+                performedByName,
+                metadata,
+                occurredAt,
+                List.of()
+        );
+    }
+
     public static TraceabilityEventResponse from(TraceabilityEvent event) {
         User actor = event.getPerformedByUser();
 
@@ -34,8 +68,26 @@ public record TraceabilityEventResponse(
                 event.getToStatus(),
                 actor == null ? null : actor.getId(),
                 actor == null ? null : fullName(actor.getFirstName(), actor.getLastName()),
-                immutableMetadata(event.getMetadata()),
+                event.getMetadata(),
                 event.getOccurredAt()
+        );
+    }
+
+    public TraceabilityEventResponse withActions(
+            List<TraceabilityActionResponse> resolvedActions
+    ) {
+        return new TraceabilityEventResponse(
+                id,
+                aggregateType,
+                aggregateId,
+                eventType,
+                fromStatus,
+                toStatus,
+                performedByUserId,
+                performedByName,
+                metadata,
+                occurredAt,
+                resolvedActions
         );
     }
 

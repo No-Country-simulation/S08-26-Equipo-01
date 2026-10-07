@@ -1,6 +1,7 @@
 package com.nocountry.qualitytrack.nonconformities.repository;
 
 import com.nocountry.qualitytrack.nonconformities.entity.NonConformity;
+import com.nocountry.qualitytrack.nonconformities.enums.NonConformityStatus;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -12,6 +13,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface NonConformityRepository extends JpaRepository<NonConformity, Long> {
+
+    long countByStatus(NonConformityStatus status);
 
     @Override
     @EntityGraph(attributePaths = {

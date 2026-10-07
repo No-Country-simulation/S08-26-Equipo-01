@@ -1,5 +1,6 @@
 package com.nocountry.qualitytrack.quotations.entity;
 
+import com.nocountry.qualitytrack.quotations.enums.QuotationAdjustmentStatus;
 import com.nocountry.qualitytrack.quotations.enums.QuotationStatus;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.users.entity.User;
@@ -79,9 +80,39 @@ class QuotationTest {
         assertEquals(original.getValidUntil(), revised.getValidUntil());
         assertEquals(original.getEstimatedDeliveryDate(), revised.getEstimatedDeliveryDate());
         assertEquals("Ajustar el plazo de entrega.", revised.getAdjustmentNotes());
+        assertNotNull(revised.getAdjustmentRequest());
+        assertEquals(QuotationAdjustmentStatus.OPEN, revised.getAdjustmentRequest().getStatus());
         assertEquals(1, revised.getItems().size());
         assertEquals("Mecanizado de eje", revised.getItems().get(0).getDescription());
         assertSame(revised, revised.getItems().get(0).getQuotation());
+    }
+
+    @Test
+    void adjustmentRequestResolvesOnlyWhenRevisedQuotationIsSent() {
+        Quotation original = Quotation.draft(jobCase, "QUO-00000001", creator);
+        original.send(Instant.parse("2026-09-14T20:00:00Z"));
+        Quotation revised = Quotation.revisedFrom(
+                original,
+                creator,
+                "Reducir el plazo de entrega."
+        );
+
+        assertEquals(QuotationAdjustmentStatus.OPEN, revised.getAdjustmentRequest().getStatus());
+        assertNull(revised.getAdjustmentRequest().getResolvedAt());
+
+        revised.recordAdjustmentResponse("Podemos adelantar la entrega diez días.");
+        revised.send(Instant.parse("2026-09-15T20:00:00Z"));
+
+        assertEquals(QuotationStatus.SENT, revised.getStatus());
+        assertEquals(QuotationAdjustmentStatus.RESOLVED, revised.getAdjustmentRequest().getStatus());
+        assertEquals(
+                "Podemos adelantar la entrega diez días.",
+                revised.getAdjustmentRequest().getResponse()
+        );
+        assertEquals(
+                Instant.parse("2026-09-15T20:00:00Z"),
+                revised.getAdjustmentRequest().getResolvedAt()
+        );
     }
 
     @Test
@@ -131,6 +162,7 @@ class QuotationTest {
         assertEquals(quotation.getTotal(), revised.getTotal());
         assertNull(revised.getAdjustmentNotes());
         assertNull(revised.getAdjustmentResponse());
+        assertNull(revised.getAdjustmentRequest());
     }
 
     @Test

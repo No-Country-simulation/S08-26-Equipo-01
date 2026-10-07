@@ -1,0 +1,230 @@
+.qt-request-card {
+  transform: perspective(1200px) rotateY(-3.5deg) rotateX(1.2deg);
+  transform-origin: 50% 50%;
+}
+
+.qt-request-document {
+  transform: perspective(900px) rotateY(7deg) rotateZ(-2.5deg);
+}
+
+.qt-request-result {
+  animation: qt-request-float 5.4s ease-in-out infinite;
+}
+
+.qt-request-workbench {
+  overflow: hidden;
+}
+
+.qt-request-workbench::before,
+.qt-request-workbench::after {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  content: '';
+  border-color: rgba(103, 232, 249, 0.24);
+  pointer-events: none;
+}
+
+.qt-request-workbench::before {
+  top: 16px;
+  left: 16px;
+  border-top: 1px solid;
+  border-left: 1px solid;
+}
+
+.qt-request-workbench::after {
+  right: 16px;
+  bottom: 16px;
+  border-right: 1px solid;
+  border-bottom: 1px solid;
+}
+
+/*
+ * Solicitud is a scroll-driven chapter. Keep one viewport physically pinned
+ * while the surrounding section consumes a compact scroll runway for the
+ * five narrative stages.
+ */
+#solicitud {
+  height: 340svh !important;
+  min-height: 340svh !important;
+}
+
+#solicitud > .sticky {
+  position: sticky !important;
+  top: 64px !important;
+  height: calc(100svh - 64px) !important;
+  min-height: calc(100svh - 64px) !important;
+  overflow: hidden !important;
+}
+
+/* The beam is positioned from React scroll progress. Never let a timer-based
+ * CSS animation override that transform, otherwise reverse scrolling breaks. */
+.qt-request-scan-beam {
+  animation: none;
+  will-change: transform, opacity;
+}
+
+.qt-request-orbit {
+  display: none;
+}
+
+.qt-request-mobile-card {
+  isolation: isolate;
+}
+
+.qt-request-mobile-card::after {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  content: '';
+  pointer-events: none;
+  background:
+    radial-gradient(
+      circle at 18% 8%,
+      rgba(34, 211, 238, 0.075),
+      transparent 24%
+    ),
+    linear-gradient(
+      115deg,
+      transparent 36%,
+      rgba(103, 232, 249, 0.025) 50%,
+      transparent 64%
+    );
+}
+
+.qt-request-mobile-scan {
+  animation: none;
+}
+
+.qt-request-mobile-trace::after {
+  position: absolute;
+  top: 0;
+  left: -2px;
+  width: 5px;
+  height: 5px;
+  content: '';
+  border-radius: 999px;
+  background: #a5f3fc;
+  box-shadow: 0 0 13px rgba(103, 232, 249, 0.9);
+  animation: qt-mobile-trace-drop 2.8s linear infinite;
+}
+
+.qt-intro-exit-pulse {
+  animation: qt-intro-trace-drop 3.4s linear infinite;
+}
+
+.qt-request-exit-pulse {
+  animation: qt-trace-drop 2.8s linear infinite;
+}
+
+@media (min-width: 1024px) {
+  #solicitud {
+    height: 380svh !important;
+    min-height: 380svh !important;
+  }
+
+  #solicitud > .sticky {
+    top: 72px !important;
+    height: calc(100svh - 72px) !important;
+    min-height: calc(100svh - 72px) !important;
+  }
+
+  #inicio > .sticky > div[aria-hidden='true']:last-child {
+    top: 62.2% !important;
+    right: auto !important;
+    bottom: 0 !important;
+    left: 34.3% !important;
+    height: auto !important;
+  }
+}
+
+@keyframes qt-request-float {
+  0%,
+  100% {
+    translate: 0 0;
+  }
+  50% {
+    translate: 0 -5px;
+  }
+}
+
+@keyframes qt-mobile-trace-drop {
+  0% {
+    translate: 0 0;
+    opacity: 0;
+  }
+  14% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    translate: 0 44px;
+    opacity: 0;
+  }
+}
+
+@keyframes qt-intro-trace-drop {
+  0% {
+    translate: 0 0;
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    translate: 0 37.8vh;
+    opacity: 0;
+  }
+}
+
+@keyframes qt-trace-drop {
+  0% {
+    translate: 0 0;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  88% {
+    opacity: 1;
+  }
+  100% {
+    translate: 0 112px;
+    opacity: 0;
+  }
+}
+
+@media (max-width: 1023px) {
+  .qt-request-card,
+  .qt-request-document {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #solicitud {
+    height: auto !important;
+    min-height: 100svh !important;
+  }
+
+  #solicitud > .sticky {
+    position: relative !important;
+    top: 0 !important;
+    height: auto !important;
+    min-height: 100svh !important;
+  }
+
+  .qt-request-result,
+  .qt-request-scan-beam,
+  .qt-request-mobile-scan,
+  .qt-request-mobile-trace::after,
+  .qt-intro-exit-pulse,
+  .qt-request-exit-pulse {
+    animation: none;
+  }
+}

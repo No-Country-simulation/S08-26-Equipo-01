@@ -224,6 +224,54 @@ class CustomerInvitationServiceTest {
     }
 
     @Test
+    void adminCanCancelPendingInvitation() {
+        CustomerInvitation invitation = invitation(
+                Instant.now().plus(Duration.ofHours(1)),
+                CustomerMembershipRole.REQUESTER
+        );
+
+        when(membershipRepository.findByCustomer_IdAndUser_IdAndStatus(
+                20L,
+                10L,
+                CustomerMembershipStatus.ACTIVE
+        )).thenReturn(Optional.of(adminMembership));
+        when(adminMembership.getRole()).thenReturn(CustomerMembershipRole.ADMIN);
+        when(invitationRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(invitation));
+        when(customer.getId()).thenReturn(20L);
+
+        service.cancelInvitation(10L, 20L, 50L);
+
+        assertEquals(CustomerInvitationStatus.CANCELLED, invitation.getStatus());
+        verify(invitationRepository).save(invitation);
+    }
+
+    @Test
+    void cannotCancelInvitationFromAnotherCustomer() {
+        CustomerInvitation invitation = invitation(
+                Instant.now().plus(Duration.ofHours(1)),
+                CustomerMembershipRole.REQUESTER
+        );
+
+        when(membershipRepository.findByCustomer_IdAndUser_IdAndStatus(
+                20L,
+                10L,
+                CustomerMembershipStatus.ACTIVE
+        )).thenReturn(Optional.of(adminMembership));
+        when(adminMembership.getRole()).thenReturn(CustomerMembershipRole.ADMIN);
+        when(invitationRepository.findByIdForUpdate(50L)).thenReturn(Optional.of(invitation));
+        when(customer.getId()).thenReturn(99L);
+
+        BusinessException exception = assertThrows(
+                BusinessException.class,
+                () -> service.cancelInvitation(10L, 20L, 50L)
+        );
+
+        assertEquals(ApiErrorCode.RESOURCE_NOT_FOUND, exception.getCode());
+        assertEquals(CustomerInvitationStatus.PENDING, invitation.getStatus());
+        verify(invitationRepository, never()).save(invitation);
+    }
+
+    @Test
     void resolvesInvitationWithoutConsumingItOrLookingUpAccount() {
         Instant expiresAt = Instant.now().plus(Duration.ofHours(1));
         CustomerInvitation invitation = invitation(expiresAt, CustomerMembershipRole.REQUESTER);

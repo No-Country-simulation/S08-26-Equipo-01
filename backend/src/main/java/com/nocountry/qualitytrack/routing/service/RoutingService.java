@@ -3,6 +3,7 @@ package com.nocountry.qualitytrack.routing.service;
 import com.nocountry.qualitytrack.routing.dto.request.CreateRoutingOperationRequest;
 import com.nocountry.qualitytrack.routing.dto.request.UpdateRoutingOperationRequest;
 import com.nocountry.qualitytrack.routing.dto.response.RoutingSheetResponse;
+import com.nocountry.qualitytrack.routing.entity.RoutingOperation;
 import com.nocountry.qualitytrack.routing.entity.RoutingSheet;
 import com.nocountry.qualitytrack.routing.enums.RoutingPurpose;
 import com.nocountry.qualitytrack.routing.repository.RoutingSheetRepository;
@@ -20,9 +21,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -117,17 +121,28 @@ public class RoutingService {
         accessPolicy.requireDesignerActor(currentUserId);
         LockedRouting locked = lockWorkOrderThenRouting(routingSheetId);
         RoutingSheet routingSheet = locked.routingSheet();
+        RoutingOperation operation;
+        boolean resequenceOperations = Boolean.TRUE.equals(input.resequenceOperations());
 
         try {
-            routingSheet.addOperation(
+            operation = routingSheet.addOperation(
                     input.sequenceNumber(),
                     input.code(),
                     input.name(),
                     input.instructions(),
-                    input.estimatedMinutes()
+                    input.estimatedMinutes(),
+                    resequenceOperations
             );
+            operation.replacePrerequisites(resolvePrerequisites(
+                    routingSheet,
+                    operation,
+                    input.prerequisiteOperationIds(),
+                    true
+            ));
+            routingSheet.validateDependencyOrder();
         } catch (IllegalArgumentException | IllegalStateException exception) {
             conflict(exception.getMessage());
+            throw exception;
         }
 
         routingSheet = routingSheetRepository.saveAndFlush(routingSheet);
@@ -142,9 +157,12 @@ public class RoutingService {
                 currentUserId,
                 metadata(
                         "revision", routingSheet.getRevision(),
+                        "operationId", operation.getId(),
                         "sequenceNumber", input.sequenceNumber(),
                         "code", input.code(),
-                        "estimatedMinutes", input.estimatedMinutes()
+                        "estimatedMinutes", input.estimatedMinutes(),
+                        "prerequisiteOperationIds", prerequisiteIds(operation),
+                        "resequenceOperations", resequenceOperations
                 )
         );
 
@@ -162,11 +180,7 @@ public class RoutingService {
         LockedRouting locked = lockWorkOrderThenRouting(routingSheetId);
         RoutingSheet routingSheet = locked.routingSheet();
 
-        if (routingSheet.findOperation(operationId).isEmpty()) {
-            throw notFound("No se encontró la operación dentro de la hoja de ruta.");
-        }
-
-        var previousOperation = routingSheet.findOperation(operationId)
+        RoutingOperation previousOperation = routingSheet.findOperation(operationId)
                 .orElseThrow(() -> notFound(
                         "No se encontró la operación dentro de la hoja de ruta."
                 ));
@@ -175,18 +189,38 @@ public class RoutingService {
         String previousName = previousOperation.getName();
         String previousInstructions = previousOperation.getInstructions();
         Integer previousEstimatedMinutes = previousOperation.getEstimatedMinutes();
+        List<RoutingOperation> previousPrerequisites = new ArrayList<>(
+                previousOperation.getPrerequisites()
+        );
+        List<Long> previousPrerequisiteIds = prerequisiteIds(previousOperation);
+        RoutingOperation operation;
+        boolean resequenceOperations = Boolean.TRUE.equals(input.resequenceOperations());
 
         try {
-            routingSheet.updateOperation(
+            operation = routingSheet.updateOperation(
                     operationId,
                     input.sequenceNumber(),
                     input.code(),
                     input.name(),
                     input.instructions(),
-                    input.estimatedMinutes()
+                    input.estimatedMinutes(),
+                    resequenceOperations
             );
+
+            if (input.prerequisiteOperationIds() == null) {
+                operation.replacePrerequisites(previousPrerequisites);
+            } else {
+                operation.replacePrerequisites(resolvePrerequisites(
+                        routingSheet,
+                        operation,
+                        input.prerequisiteOperationIds(),
+                        false
+                ));
+            }
+            routingSheet.validateDependencyOrder();
         } catch (IllegalArgumentException | IllegalStateException exception) {
             conflict(exception.getMessage());
+            throw exception;
         }
 
         routingSheet = routingSheetRepository.saveAndFlush(routingSheet);
@@ -206,11 +240,14 @@ public class RoutingService {
                         "previousName", previousName,
                         "previousInstructions", previousInstructions,
                         "previousEstimatedMinutes", previousEstimatedMinutes,
+                        "previousPrerequisiteOperationIds", previousPrerequisiteIds,
                         "sequenceNumber", input.sequenceNumber(),
                         "code", input.code(),
                         "name", input.name(),
                         "instructions", input.instructions(),
-                        "estimatedMinutes", input.estimatedMinutes()
+                        "estimatedMinutes", input.estimatedMinutes(),
+                        "prerequisiteOperationIds", prerequisiteIds(operation),
+                        "resequenceOperations", resequenceOperations
                 )
         );
 
@@ -227,10 +264,25 @@ public class RoutingService {
         LockedRouting locked = lockWorkOrderThenRouting(routingSheetId);
         RoutingSheet routingSheet = locked.routingSheet();
 
-        var operation = routingSheet.findOperation(operationId)
+        RoutingOperation operation = routingSheet.findOperation(operationId)
                 .orElseThrow(() -> notFound(
                         "No se encontró la operación dentro de la hoja de ruta."
                 ));
+
+        List<RoutingOperation> dependents = routingSheet.getOperations().stream()
+                .filter(candidate -> candidate.getPrerequisites().contains(operation))
+                .toList();
+        if (!dependents.isEmpty()) {
+            String dependentCodes = dependents.stream()
+                    .map(RoutingOperation::getCode)
+                    .sorted()
+                    .reduce((left, right) -> left + ", " + right)
+                    .orElse("");
+            conflict(
+                    "No puedes eliminar " + operation.getCode()
+                            + " porque todavía es requisito de: " + dependentCodes + "."
+            );
+        }
 
         Map<String, Object> eventMetadata = metadata(
                 "operationId", operation.getId(),
@@ -238,13 +290,15 @@ public class RoutingService {
                 "code", operation.getCode(),
                 "name", operation.getName(),
                 "instructions", operation.getInstructions(),
-                "estimatedMinutes", operation.getEstimatedMinutes()
+                "estimatedMinutes", operation.getEstimatedMinutes(),
+                "prerequisiteOperationIds", prerequisiteIds(operation)
         );
 
         try {
             routingSheet.removeOperation(operationId);
         } catch (IllegalArgumentException | IllegalStateException exception) {
             conflict(exception.getMessage());
+            throw exception;
         }
 
         routingSheet = routingSheetRepository.saveAndFlush(routingSheet);
@@ -261,6 +315,64 @@ public class RoutingService {
         );
 
         return RoutingSheetResponse.from(routingSheet);
+    }
+
+    private List<RoutingOperation> resolvePrerequisites(
+            RoutingSheet routingSheet,
+            RoutingOperation operation,
+            List<Long> requestedIds,
+            boolean defaultToPrevious
+    ) {
+        List<RoutingOperation> availablePrevious = routingSheet.getOperations().stream()
+                .filter(candidate -> candidate != operation)
+                .filter(candidate -> candidate.getSequenceNumber() < operation.getSequenceNumber())
+                .sorted((left, right) -> Integer.compare(
+                        left.getSequenceNumber(),
+                        right.getSequenceNumber()
+                ))
+                .toList();
+
+        if (requestedIds == null) {
+            if (!defaultToPrevious || availablePrevious.isEmpty()) {
+                return List.of();
+            }
+            return List.of(availablePrevious.get(availablePrevious.size() - 1));
+        }
+
+        Set<Long> uniqueIds = new HashSet<>();
+        List<RoutingOperation> resolved = new ArrayList<>();
+        for (Long prerequisiteId : requestedIds) {
+            if (prerequisiteId == null || !uniqueIds.add(prerequisiteId)) {
+                throw new IllegalArgumentException(
+                        "Las dependencias de la operación contienen valores inválidos o repetidos."
+                );
+            }
+
+            RoutingOperation prerequisite = routingSheet.findOperation(prerequisiteId)
+                    .orElseThrow(() -> new IllegalArgumentException(
+                            "No se encontró una de las operaciones requeridas dentro de la hoja de ruta."
+                    ));
+
+            if (prerequisite == operation
+                    || prerequisite.getSequenceNumber() >= operation.getSequenceNumber()) {
+                throw new IllegalArgumentException(
+                        "Una operación solo puede esperar a secuencias anteriores."
+                );
+            }
+            resolved.add(prerequisite);
+        }
+
+        return resolved;
+    }
+
+    private List<Long> prerequisiteIds(RoutingOperation operation) {
+        return operation.getPrerequisites().stream()
+                .sorted((left, right) -> Integer.compare(
+                        left.getSequenceNumber(),
+                        right.getSequenceNumber()
+                ))
+                .map(RoutingOperation::getId)
+                .toList();
     }
 
     private LockedRouting lockWorkOrderThenRouting(Long routingSheetId) {

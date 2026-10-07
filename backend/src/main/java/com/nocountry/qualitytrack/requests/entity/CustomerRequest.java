@@ -13,6 +13,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -66,6 +67,9 @@ public class CustomerRequest {
     @JoinColumn(name = "requested_by_user_id", nullable = false)
     private User requestedByUser;
 
+    @OneToOne(mappedBy = "customerRequest", fetch = FetchType.LAZY)
+    private RequestDeliveryDestination deliveryDestination;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
@@ -96,6 +100,13 @@ public class CustomerRequest {
         this.materialRequirement = materialRequirement;
         this.requestedDeliveryDate = requestedDeliveryDate;
         this.requestedByUser = requestedByUser;
+    }
+
+    public void attachDeliveryDestination(RequestDeliveryDestination deliveryDestination) {
+        if (this.deliveryDestination != null) {
+            throw new IllegalStateException("La solicitud ya tiene un destino de entrega.");
+        }
+        this.deliveryDestination = deliveryDestination;
     }
 
     public static CustomerRequest submit(

@@ -11,7 +11,9 @@ import com.nocountry.qualitytrack.requests.repository.CaseMaterialSpecificationR
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
 import com.nocountry.qualitytrack.shared.exception.ApiErrorCode;
 import com.nocountry.qualitytrack.shared.exception.BusinessException;
+import com.nocountry.qualitytrack.traceability.dto.response.TraceabilityTimelinePageResponse;
 import com.nocountry.qualitytrack.traceability.dto.response.TraceabilityEventResponse;
+import com.nocountry.qualitytrack.traceability.service.TraceabilityActionResolver;
 import com.nocountry.qualitytrack.traceability.service.TraceabilityService;
 import com.nocountry.qualitytrack.users.entity.User;
 import com.nocountry.qualitytrack.users.entity.UserSystemRole;
@@ -36,6 +38,7 @@ public class JobCaseService {
     private final CaseInformationRequestRepository informationRequestRepository;
     private final CaseMaterialSpecificationRepository materialSpecificationRepository;
     private final TraceabilityService traceabilityService;
+    private final TraceabilityActionResolver traceabilityActionResolver;
 
     @Transactional(readOnly = true)
     public List<JobCaseResponse> list(Long currentUserId) {
@@ -78,7 +81,12 @@ public class JobCaseService {
     }
 
     @Transactional(readOnly = true)
-    public List<TraceabilityEventResponse> timeline(Long currentUserId, Long caseId) {
+    public TraceabilityTimelinePageResponse timeline(
+            Long currentUserId,
+            Long caseId,
+            int limit,
+            String cursor
+    ) {
         requireCanReadJobCases(currentUserId);
 
         if (!jobCaseRepository.existsById(caseId)) {
@@ -88,7 +96,21 @@ public class JobCaseService {
             );
         }
 
-        return traceabilityService.timeline(caseId);
+        TraceabilityTimelinePageResponse page =
+                traceabilityService.timeline(caseId, limit, cursor);
+
+        List<TraceabilityEventResponse> navigableItems = page.items()
+                .stream()
+                .map(event -> event.withActions(
+                        traceabilityActionResolver.resolve(event)
+                ))
+                .toList();
+
+        return new TraceabilityTimelinePageResponse(
+                navigableItems,
+                page.nextCursor(),
+                page.hasMore()
+        );
     }
 
     private void requireCanReadJobCases(Long userId) {

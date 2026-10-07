@@ -12,6 +12,7 @@ import com.nocountry.qualitytrack.documents.repository.DocumentVersionRepository
 import com.nocountry.qualitytrack.documents.storage.DocumentStorage;
 import com.nocountry.qualitytrack.documents.storage.DocumentStorageException;
 import com.nocountry.qualitytrack.documents.storage.StoredDocumentFile;
+import com.nocountry.qualitytrack.materials.entity.MaterialLot;
 import com.nocountry.qualitytrack.materials.repository.MaterialLotRepository;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
@@ -99,6 +100,125 @@ public class DocumentService {
         version = documentVersionRepository.saveAndFlush(version);
 
         return DocumentResponse.from(document, version);
+    }
+
+    @Transactional
+    public DocumentVersion upsertMaterialCertificate(
+            Long currentUserId,
+            MaterialLot lot,
+            MultipartFile file
+    ) {
+        validateFile(file);
+        User uploader = accessService.requireMaterialCertificateWriter(currentUserId);
+
+        Document document = documentRepository
+                .findByMaterialLotAndTypeAndStatusForUpdate(
+                        lot.getId(),
+                        "MATERIAL_CERTIFICATE",
+                        DocumentStatus.ACTIVE
+                )
+                .orElse(null);
+
+        int nextVersion;
+        if (document == null) {
+            document = Document.createForMaterialLot(
+                    lot,
+                    "MATERIAL_CERTIFICATE",
+                    "Certificado · " + lot.getLotNumber(),
+                    "Certificado del lote " + lot.getLotNumber()
+                            + " del material " + lot.getMaterial().getCode() + ".",
+                    uploader
+            );
+            document = documentRepository.saveAndFlush(document);
+            nextVersion = 1;
+        } else {
+            nextVersion = documentVersionRepository.findMaxVersionByDocumentId(document.getId()) + 1;
+        }
+
+        String fileName = sanitizeFileName(file.getOriginalFilename());
+        StoredDocumentFile storedFile = storeMaterialLotFile(
+                lot,
+                nextVersion,
+                fileName,
+                file
+        );
+        registerRollbackCleanup(storedFile.storageKey());
+
+        DocumentVersion version = DocumentVersion.upload(
+                document,
+                nextVersion,
+                fileName,
+                storedFile.storageKey(),
+                normalizeMimeType(file.getContentType()),
+                storedFile.fileSize(),
+                storedFile.checksum(),
+                uploader
+        );
+
+        return documentVersionRepository.saveAndFlush(version);
+    }
+
+    @Transactional(readOnly = true)
+    public List<DocumentVersionResponse> listVersionsInternal(
+            Long currentUserId,
+            Long documentId
+    ) {
+        accessService.requireInternalReader(currentUserId);
+
+        Document document = documentRepository.findById(documentId)
+                .filter(Document::isActive)
+                .orElseThrow(() -> new BusinessException(
+                        ApiErrorCode.RESOURCE_NOT_FOUND,
+                        "No se encontró el documento activo."
+                ));
+
+        return documentVersionRepository.findAllByDocument_IdOrderByVersionAsc(document.getId())
+                .stream()
+                .map(DocumentVersionResponse::from)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public DocumentDownload downloadInternal(
+            Long currentUserId,
+            Long documentId,
+            Long versionId
+    ) {
+        accessService.requireInternalReader(currentUserId);
+
+        DocumentVersion version = documentVersionRepository
+                .findByIdAndDocument_IdAndDocument_Status(
+                        versionId,
+                        documentId,
+                        DocumentStatus.ACTIVE
+                )
+                .orElseThrow(() -> new BusinessException(
+                        ApiErrorCode.RESOURCE_NOT_FOUND,
+                        "No se encontró la versión del documento activo."
+                ));
+
+        try {
+            Resource resource = storage.load(version.getStorageKey());
+            long fileSize = version.getFileSize() == null
+                    ? resource.contentLength()
+                    : version.getFileSize();
+
+            return new DocumentDownload(
+                    resource,
+                    version.getFileName(),
+                    version.getMimeType(),
+                    fileSize
+            );
+        } catch (IOException | DocumentStorageException exception) {
+            LOGGER.error(
+                    "Internal document storage read failed. provider={}, documentId={}, versionId={}",
+                    storage.getClass().getSimpleName(),
+                    documentId,
+                    versionId,
+                    exception
+            );
+            throw storageUnavailable(exception);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -235,6 +355,47 @@ public class DocumentService {
             throw new BusinessException(
                     ApiErrorCode.DATA_CONFLICT,
                     "Uno o más documentos del expediente no tienen versiones activas disponibles."
+            );
+        }
+
+        return versionsByDocumentId;
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, List<DocumentVersionResponse>> listVersionsByDocumentIdsInternal(
+            Long currentUserId,
+            List<Long> documentIds
+    ) {
+        accessService.requireInternalReader(currentUserId);
+
+        if (documentIds == null || documentIds.isEmpty()) {
+            return Map.of();
+        }
+
+        List<Long> distinctDocumentIds = documentIds.stream()
+                .distinct()
+                .toList();
+
+        Map<Long, List<DocumentVersionResponse>> versionsByDocumentId =
+                documentVersionRepository
+                        .findAllActiveByDocumentIds(
+                                DocumentStatus.ACTIVE,
+                                distinctDocumentIds
+                        )
+                        .stream()
+                        .collect(Collectors.groupingBy(
+                                version -> version.getDocument().getId(),
+                                LinkedHashMap::new,
+                                Collectors.mapping(
+                                        DocumentVersionResponse::from,
+                                        Collectors.toUnmodifiableList()
+                                )
+                        ));
+
+        if (versionsByDocumentId.size() != distinctDocumentIds.size()) {
+            throw new BusinessException(
+                    ApiErrorCode.DATA_CONFLICT,
+                    "Uno o más documentos operativos no tienen versiones activas disponibles."
             );
         }
 
@@ -379,6 +540,33 @@ public class DocumentService {
                     storage.getClass().getSimpleName(),
                     customerId,
                     jobCase.getId(),
+                    version,
+                    exception
+            );
+            throw storageUnavailable(exception);
+        }
+    }
+
+    private StoredDocumentFile storeMaterialLotFile(
+            MaterialLot lot,
+            Integer version,
+            String fileName,
+            MultipartFile file
+    ) {
+        try (InputStream inputStream = file.getInputStream()) {
+            return storage.storeMaterialLot(
+                    lot.getMaterial().getId(),
+                    lot.getId(),
+                    version,
+                    fileName,
+                    inputStream
+            );
+        } catch (IOException | DocumentStorageException exception) {
+            LOGGER.error(
+                    "Material certificate storage write failed. provider={}, materialId={}, lotId={}, version={}",
+                    storage.getClass().getSimpleName(),
+                    lot.getMaterial().getId(),
+                    lot.getId(),
                     version,
                     exception
             );

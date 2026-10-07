@@ -1,6 +1,7 @@
 package com.nocountry.qualitytrack.machines.service;
 
 import com.nocountry.qualitytrack.machines.dto.request.CreateMachineRequest;
+import com.nocountry.qualitytrack.machines.dto.request.UpdateMachineStatusRequest;
 import com.nocountry.qualitytrack.machines.dto.response.MachineResponse;
 import com.nocountry.qualitytrack.machines.entity.Machine;
 import com.nocountry.qualitytrack.machines.repository.MachineRepository;
@@ -52,5 +53,32 @@ public class MachineService {
                 .stream()
                 .map(MachineResponse::from)
                 .toList();
+    }
+
+    @Transactional
+    public MachineResponse updateStatus(
+            Long currentUserId,
+            Long machineId,
+            UpdateMachineStatusRequest request
+    ) {
+        accessPolicy.requireProductionActor(currentUserId);
+
+        Machine machine = machineRepository.findByIdForUpdate(machineId)
+                .orElseThrow(() -> new BusinessException(
+                        ApiErrorCode.RESOURCE_NOT_FOUND,
+                        "No se encontró la máquina."
+                ));
+
+        try {
+            machine.changeOperationalStatus(request.status());
+        } catch (IllegalArgumentException | IllegalStateException exception) {
+            throw new BusinessException(
+                    ApiErrorCode.DATA_CONFLICT,
+                    exception.getMessage(),
+                    exception
+            );
+        }
+
+        return MachineResponse.from(machineRepository.saveAndFlush(machine));
     }
 }

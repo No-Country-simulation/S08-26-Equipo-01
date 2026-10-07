@@ -123,14 +123,42 @@ public class JobCase {
         this.status = JobCaseStatus.READY_FOR_QUOTATION;
     }
 
-    public void markInProduction() {
+    public void markAwaitingWorkOrder() {
         if (status != JobCaseStatus.READY_FOR_QUOTATION) {
             throw new IllegalStateException(
-                    "Solo se puede iniciar producción desde READY_FOR_QUOTATION."
+                    "Solo un expediente READY_FOR_QUOTATION puede esperar una orden de trabajo."
+            );
+        }
+
+        this.status = JobCaseStatus.AWAITING_WORK_ORDER;
+    }
+
+    public void markInProduction() {
+        if (status != JobCaseStatus.AWAITING_WORK_ORDER) {
+            throw new IllegalStateException(
+                    "Solo se puede iniciar producción desde AWAITING_WORK_ORDER."
             );
         }
 
         this.status = JobCaseStatus.IN_PRODUCTION;
+    }
+
+    public void complete(Instant completedAt) {
+        if (status != JobCaseStatus.IN_PRODUCTION) {
+            throw new IllegalStateException(
+                    "Solo un expediente IN_PRODUCTION puede completarse."
+            );
+        }
+
+        Instant actualCompletedAt = Objects.requireNonNull(completedAt);
+        if (actualCompletedAt.isBefore(openedAt)) {
+            throw new IllegalArgumentException(
+                    "La fecha de cierre no puede ser anterior a la apertura del expediente."
+            );
+        }
+
+        this.closedAt = actualCompletedAt;
+        this.status = JobCaseStatus.COMPLETED;
     }
 
     public boolean canBeCancelled() {

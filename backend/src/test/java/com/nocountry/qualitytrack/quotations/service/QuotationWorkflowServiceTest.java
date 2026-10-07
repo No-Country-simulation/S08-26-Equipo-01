@@ -15,6 +15,7 @@ import com.nocountry.qualitytrack.quotations.enums.QuotationStatus;
 import com.nocountry.qualitytrack.quotations.repository.QuotationRepository;
 import com.nocountry.qualitytrack.requests.entity.CustomerRequest;
 import com.nocountry.qualitytrack.requests.entity.JobCase;
+import com.nocountry.qualitytrack.requests.enums.JobCaseStatus;
 import com.nocountry.qualitytrack.requests.enums.MaterialRequirementType;
 import com.nocountry.qualitytrack.requests.repository.JobCaseRepository;
 import com.nocountry.qualitytrack.traceability.enums.TraceabilityEventType;
@@ -421,7 +422,7 @@ class QuotationWorkflowServiceTest {
     }
 
     @Test
-    void customerCanApproveCurrentSentRevisionWithoutCreatingWorkOrder() {
+    void customerApprovalHandsCaseOffToWorkOrderQueue() {
         JobCase jobCase = readyJobCase();
         Quotation quotation = sentQuotation(jobCase);
 
@@ -434,6 +435,7 @@ class QuotationWorkflowServiceTest {
 
         assertEquals(CustomerQuotationStatus.APPROVED, response.customerStatus());
         assertNotNull(response.approvedAt());
+        assertEquals(JobCaseStatus.AWAITING_WORK_ORDER, jobCase.getStatus());
         verify(traceabilityService).record(
                 eq(jobCase),
                 any(),

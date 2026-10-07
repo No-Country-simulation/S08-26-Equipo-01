@@ -90,6 +90,18 @@ public class MaterialLot {
         );
     }
 
+    public void attachCertificate(DocumentVersion certificateDocumentVersion) {
+        DocumentVersion version = Objects.requireNonNull(certificateDocumentVersion);
+        if (version.getDocument().getMaterialLot() == null
+                || !Objects.equals(version.getDocument().getMaterialLot().getId(), id)) {
+            throw new IllegalArgumentException(
+                    "El certificado debe pertenecer al mismo lote de material."
+            );
+        }
+
+        this.certificateDocumentVersion = version;
+    }
+
     private static BigDecimal requirePositive(BigDecimal value, String message) {
         if (value == null || value.signum() <= 0) {
             throw new IllegalArgumentException(message);
